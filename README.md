@@ -288,6 +288,12 @@ The new country is automatically picked up by the MCP `list_countries_tool` and 
 
 ---
 
+## Contributors
+
+- **[Masanto](https://github.com/hirotomasato)** — author & maintainer
+
+---
+
 ## License
 
 [MIT](./LICENSE) © 2026 hirotomasato
