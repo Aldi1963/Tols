@@ -18,7 +18,8 @@
   - [4. Kotak Alat Dokumen & Konverter PDF](#4-kotak-alat-dokumen--konverter-pdf)
   - [5. AI Background Remover & Pasfoto Studio](#5-ai-background-remover--pasfoto-studio)
   - [6. Media & Video Downloader Tanpa Watermark](#6-media--video-downloader-tanpa-watermark)
-  - [7. Monetisasi QRIS & Sistem Referral](#7-monetisasi-qris--sistem-referral)
+  - [7. Auto Clip Video 9:16 (TikTok, Reels, Shorts)](#7-auto-clip-video-916-tiktok-reels-shorts)
+  - [8. Monetisasi QRIS & Sistem Referral](#8-monetisasi-qris--sistem-referral)
 - [Arsitektur & Struktur Proyek](#-arsitektur--struktur-proyek)
 - [Persyaratan Sistem](#-persyaratan-sistem)
 - [Panduan Instalasi & Menjalankan](#-panduan-instalasi--menjalankan)
@@ -93,7 +94,17 @@ Menerbitkan paket lengkap berkas pendidik (Kartu Identitas, SK Pengangkatan, Sli
 * **Interaktif**: Menampilkan thumbnail pratinjau judul dan tombol pilihan kualitas (Video HD, Video Hemat 480p, Audio MP3, atau Cover Foto).
 * **Smart Auto-Detect**: Cukup kirim/paste link video langsung ke obrolan bot tanpa perlu membuka menu.
 
-### 7. Monetisasi QRIS & Sistem Referral
+### 7. Auto Clip Video 9:16 (TikTok, Reels, Shorts)
+* **Auto-Framing Vertikal Rasio 9:16**:
+  * Mengubah video horizontal (YouTube, Facebook, podcast, kajian, atau tutorial) menjadi video vertikal pas layar ponsel (720x1280 / 1080x1920).
+  * Dilengkapi efek **Dynamic Blur Background**: Video utama tetap utuh di tengah, dengan latar belakang atas dan bawah bernuansa blur estetik khas akun klip profesional.
+* **Mode Pemotongan Klip Cerdas**:
+  * ⚡ **Auto Split Bersambung**: Memotong video panjang secara otomatis menjadi klip berdurasi 60 detik berseri (Part 1, Part 2, Part 3) siap unggah bersambung ke TikTok / Reels.
+  * 📱 **Klip 30 Detik / 60 Detik Instan**: Mengambil segmen pembuka berdurasi pas untuk konten *hook*.
+* **Akselerasi FFmpeg Multi-Thread**:
+  * Pemrosesan encoding cepat (*ultrafast preset*) langsung di VPS bertenaga AMD EPYC tanpa membuat server freeze.
+
+### 8. Monetisasi QRIS & Sistem Referral
 * **Clipku Pay Integration**: Terintegrasi langsung dengan gateway pembayaran QRIS otomatis seketika (`https://m.clipku.com/api/index.php`).
 * **Paket Langganan**:
   * ⚡ **+10 Kuota Cetak**: Rp 5.000 (Masa aktif selamanya).
@@ -118,6 +129,7 @@ Menerbitkan paket lengkap berkas pendidik (Kartu Identitas, SK Pengangkatan, Sli
 ├── rembg_service.py             # AI Background Remover & Pasfoto Studio (U2-Net)
 ├── office_tools.py              # Suite Alat Konversi Dokumen, PDF, Kompres, OCR & 4R
 ├── media_downloader.py          # Engine Video Downloader No-WM (TikWM & yt-dlp)
+├── auto_clipper.py              # Engine Auto Clip Video Vertikal 9:16 & Multi-Part Splitter
 ├── countries/                   # Modul Generator Pendidik 13 Negara
 │   ├── assets/logos/            # Aset Logo Resmi Vektor (UT, UGM, UI, ITB, Kemendikbud)
 │   ├── foto_indo/               # Galeri Kurasi Pasfoto Formal Indonesia
@@ -185,6 +197,7 @@ Menerbitkan paket lengkap berkas pendidik (Kartu Identitas, SK Pengangkatan, Sli
 | `/pelajar` | Membuka generator Kartu Pelajar SMA/SMK Negeri |
 | `/guru` | Membuka katalog dokumen sertifikat pendidik 13 negara |
 | `/rembg` | Membuka AI Background Remover & ganti warna pasfoto resmi |
+| `/autoclip` | Membuka Auto Clip Video 9:16 (Vertikal TikTok / Reels) |
 | `/dl` | Membuka mode pengunduh video & musik tanpa watermark |
 | `/kompres` | Membuka kompresor foto standar SSCASN CPNS 200KB |
 | `/komprespdf` | Mengompres dokumen PDF menjadi <500KB / <1MB |
