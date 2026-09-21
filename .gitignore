@@ -26,3 +26,11 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+users.db
+*.png.bak
+/tmp/
+test_*.png
+sample_*.png
+new_*.png
+perfect_*.png
