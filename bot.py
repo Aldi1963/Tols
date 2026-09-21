@@ -1882,6 +1882,98 @@ def generate_single_for_country(country_code: str, target_doc: str):
     return b, target_doc, first, last, school
 
 
+
+# ==================== HANDLER GENERATOR KTM DARI REPLY KEYBOARD ====================
+
+async def handle_generate_ktm_action(update: Update, context: ContextTypes.DEFAULT_TYPE, univ_code: Optional[str] = None):
+    """Menerbitkan KTM resmi langsung dari tombol Reply Keyboard"""
+    user = update.effective_user
+    u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
+
+    if not u_data["is_vip"] and u_data["quota_left"] <= 0:
+        await update.message.reply_text(
+            "⚠️ <b>Kuota Cetak Harian Anda Telah Habis!</b>\n\n"
+            "Kuota gratis Anda sudah terpakai. Silakan isi ulang kuota atau langganan VIP di menu 👑 PROFIL & VIP.",
+            reply_markup=get_main_reply_keyboard(),
+            parse_mode="HTML"
+        )
+        return
+
+    status_msg = await update.message.reply_text(
+        "⏳ <b>Sedang merender Kartu Tanda Mahasiswa (KTM)...</b>\n"
+        "• Menyematkan lambang resmi institusi\n"
+        "• Memasang pasfoto formal & tanda tangan basah\n"
+        "• Menyuntikkan metadata EXIF sensor kamera iPhone...",
+        parse_mode="HTML"
+    )
+
+    try:
+        first_names_m = ["Dimas", "Ahmad", "Fajar", "Bagus", "Rizky", "Aditya", "Bayu", "Arif", "Hendra"]
+        first_names_f = ["Siti", "Nur", "Putri", "Dian", "Anisa", "Dewi", "Rini", "Ayu", "Fitri"]
+        last_names = ["Prasetyo", "Santoso", "Saputra", "Hidayat", "Kusuma", "Wibowo", "Nugroho", "Setiawan"]
+
+        is_female = random.choice([True, False])
+        first = random.choice(first_names_f if is_female else first_names_m)
+        last = random.choice(last_names)
+        gender_param = "Female" if is_female else "Male"
+
+        ktm_png_bytes = ktm_engine.generate(first, last, univ_code=univ_code, gender=gender_param)
+        ktm_exif_bytes = inject_camera_exif(ktm_png_bytes)
+
+        if not u_data["is_vip"]:
+            decrement_quota(user.id)
+            track_document_generated(user.id, "KTM", univ_code or "UT")
+
+        session_key = f"{user.id}_{int(datetime.now().timestamp())}"
+        SESSION_DOC_CACHE[session_key] = {
+            "png_bytes": ktm_png_bytes,
+            "exif_bytes": ktm_exif_bytes,
+            "first": first,
+            "last": last,
+            "univ_code": univ_code or "UT",
+            "type": "KTM",
+        }
+        context.user_data["last_session_key"] = session_key
+
+        univ_display_names = {
+            "UT": "Universitas Terbuka (UT)",
+            "UI": "Universitas Indonesia (UI)",
+            "UGM": "Universitas Gadjah Mada (UGM)",
+            "ITB": "Institut Teknologi Bandung (ITB)",
+            "UB": "Universitas Brawijaya (UB)",
+            "HARVARD": "Harvard University (US)",
+            "MIT": "Massachusetts Institute of Technology (US)",
+            "STANFORD": "Stanford University (US)",
+            "OXFORD": "University of Oxford (UK)",
+        }
+        u_target = univ_display_names.get(univ_code, univ_code or "Universitas Terbuka (UT)")
+
+        caption = (
+            f"✅ <b>Kartu Tanda Mahasiswa (KTM) Berhasil Dibuat!</b>\n\n"
+            f"🏛️ <b>Universitas:</b> {u_target}\n"
+            f"👤 <b>Nama:</b> {first} {last} ({gender_param})\n"
+            f"🎓 <b>Jenjang:</b> Strata 1 (S1) Mahasiswa Aktif\n"
+            f"📸 <b>Anti-Fraud:</b> Disertai Metadata Sensor Kamera Nyata\n"
+            f"🖋️ <b>Legalitas:</b> Tanda Tangan Basah & Cap Biro Akademik\n\n"
+            f"👇 <b>Pilih mockup fisik (Meja, Lanyard, POV) atau unduh berkas pada tombol di bawah:</b>"
+        )
+
+        bio = io.BytesIO(ktm_exif_bytes)
+        bio.name = f"KTM_{univ_code or 'UT'}_{first}_{last}.jpg"
+        bio.seek(0)
+
+        await update.message.reply_photo(
+            photo=bio,
+            caption=caption,
+            reply_markup=get_card_action_reply_keyboard(),
+            parse_mode="HTML"
+        )
+        await status_msg.delete()
+
+    except Exception as e:
+        logger.error(f"Error generating KTM from reply button: {e}", exc_info=True)
+        await status_msg.edit_text(f"❌ Terjadi kesalahan: {html.escape(str(e))}", parse_mode="HTML")
+
 async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Router Hub 2x2: Bersih, Cepat, dan Sangat Lega di Layar HP"""
     text = update.message.text.strip()
@@ -1898,6 +1990,23 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     # Navigasi Utama
     if text in ["« KEMBALI KE MENU UTAMA", "🏠 MENU UTAMA", "« MENU UTAMA"]:
         await start_command(update, context)
+        return
+
+    # 2. Handler Klik Kampus Indonesia & Internasional (Reply Keyboard)
+    ktm_map = {
+        "🎓 Universitas Terbuka (UT)": "UT",
+        "🎓 Univ. Indonesia (UI)": "UI",
+        "🎓 Univ. Gadjah Mada (UGM)": "UGM",
+        "🎓 ITB Bandung": "ITB",
+        "🎓 Univ. Brawijaya (UB)": "UB",
+        "🎲 Kampus Acak": None,
+        "🏛️ Harvard Univ (US)": "HARVARD",
+        "🏛️ MIT Tech (US)": "MIT",
+        "🏛️ Stanford Univ (US)": "STANFORD",
+        "🏛️ Univ of Oxford (UK)": "OXFORD",
+    }
+    if text in ktm_map:
+        await handle_generate_ktm_action(update, context, ktm_map[text])
         return
 
     # ==================== HUB 1: 🎓 BUAT DOKUMEN ====================
