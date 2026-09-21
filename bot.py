@@ -223,6 +223,18 @@ def get_dl_format_keyboard(session_key: str, is_slideshow: bool = False):
         ],
     ])
 
+def get_khs_univ_reply_keyboard():
+    """Reply Keyboard Pemilihan Kampus untuk Cetak Transkrip Nilai (KHS)"""
+    return ReplyKeyboardMarkup(
+        [
+            [KeyboardButton("📊 KHS Universitas Terbuka (UT)"), KeyboardButton("📊 KHS Univ. Indonesia (UI)")],
+            [KeyboardButton("📊 KHS Univ. Gadjah Mada (UGM)"), KeyboardButton("📊 KHS ITB Bandung")],
+            [KeyboardButton("📊 KHS Univ. Brawijaya (UB)"), KeyboardButton("« KEMBALI KE KOTAK ALAT")],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
 def get_tools_hub_reply_keyboard():
     """Sub-Menu Hub: Seluruh Alat File, Konversi, Foto & Media Video"""
     return ReplyKeyboardMarkup(
@@ -1931,6 +1943,35 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         context.user_data["awaiting_custom_name"] = True
         return
 
+    # Handler Transkrip Nilai (KHS)
+    elif text in ["📊 Transkrip Nilai (KHS)", "📊 TRANSKRIP NILAI (KHS)", "📊 Transkrip Nilai", "/khs"]:
+        await khs_menu_handler(update, context)
+        return
+
+    elif text in ["📊 KHS Universitas Terbuka (UT)", "KHS UT"]:
+        await khs_generate_handler(update, context, "UT")
+        return
+
+    elif text in ["📊 KHS Univ. Indonesia (UI)", "KHS UI"]:
+        await khs_generate_handler(update, context, "UI")
+        return
+
+    elif text in ["📊 KHS Univ. Gadjah Mada (UGM)", "KHS UGM"]:
+        await khs_generate_handler(update, context, "UGM")
+        return
+
+    elif text in ["📊 KHS ITB Bandung", "KHS ITB"]:
+        await khs_generate_handler(update, context, "ITB")
+        return
+
+    elif text in ["📊 KHS Univ. Brawijaya (UB)", "KHS UB"]:
+        await khs_generate_handler(update, context, "UB")
+        return
+
+    elif text in ["« KEMBALI KE KOTAK ALAT", "« KOTAK ALAT"]:
+        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE, KONVERSI & FOTO</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
+        return
+
     # ==================== HUB 2: 🛠️ KOTAK ALAT FILE ====================
     elif text in ["🛠️ KOTAK ALAT FILE", "🛠️ KOTAK ALAT & KONVERSI", "🛠️ ALAT DOKUMEN & FOTO"]:
         msg = (
@@ -3137,6 +3178,92 @@ async def compress_pdf_level_received(update: Update, context: ContextTypes.DEFA
         await update.message.reply_text(f"❌ Terjadi kesalahan saat kompres PDF: {e}", reply_markup=get_compress_category_reply_keyboard())
         return ConversationHandler.END
 
+# ==================== HANDLER TRANSKRIP NILAI (KHS) ====================
+
+async def khs_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Menampilkan pilihan kampus untuk cetak Transkrip Nilai (KHS)"""
+    msg = (
+        "📊 <b>CETAK TRANSKRIP NILAI / KARTU HASIL STUDI (KHS)</b>\n\n"
+        "Dokumen naskah akademik resmi A4 (300 DPI) berisikan:\n"
+        "• Kop resmi Universitas & Kementerian Sains Teknologi\n"
+        "• Tabel 8 Mata Kuliah (22 SKS, Nilai A/A-/B+, Bobot SKS)\n"
+        "• Indeks Prestasi Kumulatif: <b>IPK 3.84 (Cum Laude)</b>\n"
+        "• Tanda tangan basah Dekan & Cap Stempel Ungu Dekanat\n"
+        "• Sensor metadata EXIF asli kamera HP (Anti-Fraud)\n\n"
+        "👇 <b>Silakan pilih universitas pada tombol di bawah:</b>"
+    )
+    await update.message.reply_text(msg, reply_markup=get_khs_univ_reply_keyboard(), parse_mode="HTML")
+
+async def khs_generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, univ_code: str):
+    """Menerbitkan lembar KHS resmi berdasarkan universitas"""
+    user = update.effective_user
+    u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
+    if not u_data["is_vip"] and u_data["quota_left"] <= 0:
+        await update.message.reply_text("⚠️ <b>Kuota cetak Anda habis!</b>\nSilakan isi ulang kuota di menu 👑 PROFIL & VIP.", parse_mode="HTML")
+        return
+
+    status_msg = await update.message.reply_text("⏳ <i>Sedang menyusun naskah akademik & merender Transkrip Nilai (KHS) 300 DPI...</i>", parse_mode="HTML")
+
+    try:
+        from khs_generator import generate_khs_transcript
+        
+        # Ambil nama user atau acak
+        f_name = user.first_name or "Aditya"
+        l_name = user.last_name or "Pratama"
+        
+        khs_png = generate_khs_transcript(first_name=f_name, last_name=l_name, univ_code=univ_code)
+        khs_exif = inject_camera_exif(khs_png)
+
+        # Simpan ke cache
+        khs_key = f"{user.id}_last_khs"
+        SESSION_DOC_CACHE[khs_key] = {
+            "png_bytes": khs_png,
+            "exif_bytes": khs_exif,
+            "univ_code": univ_code,
+            "name": f"{f_name} {l_name}",
+            "type": "khs"
+        }
+
+        # Potong kuota
+        if not u_data["is_vip"]:
+            decrement_quota(user.id)
+            track_document_generated(user.id, "KHS", univ_code)
+
+        kb = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("📥 Unduh KHS PDF", callback_data=f"dl_pdf:{khs_key}"),
+                InlineKeyboardButton("📁 Unduh Gambar HD (PNG)", callback_data=f"dl_raw:{khs_key}")
+            ],
+            [InlineKeyboardButton("« Selesai", callback_data="main_menu")]
+        ])
+
+        caption = (
+            f"✅ <b>Transkrip Nilai (KHS) Resmi Berhasil Diterbitkan!</b>\n\n"
+            f"• Mahasiswa: <b>{html.escape(f_name.upper())} {html.escape(l_name.upper())}</b>\n"
+            f"• Kampus: <b>{univ_code}</b>\n"
+            f"• Prestasi: <b>22 SKS • IPK 3.84 (Cum Laude)</b>\n"
+            f"• Format: <b>Lembar A4 Resmi 300 DPI</b>\n"
+            f"• Legalitas: Tanda Tangan Dekanat + Stempel Dinas\n"
+            f"• Keamanan: Anti-Fraud EXIF iPhone 14 Pro Verified"
+        )
+
+        bio = io.BytesIO(khs_exif)
+        bio.name = f"KHS_{univ_code}_{f_name}.png"
+        bio.seek(0)
+
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=bio,
+            caption=caption,
+            reply_markup=kb,
+            parse_mode="HTML"
+        )
+        await status_msg.delete()
+
+    except Exception as e:
+        logger.error(f"Error generating KHS: {e}", exc_info=True)
+        await status_msg.edit_text(f"❌ <b>Gagal menerbitkan KHS:</b> {e}", parse_mode="HTML")
+
 def main():
     print("Starting Comprehensive Yowes Bot...")
     req_settings = HTTPXRequest(
@@ -3341,6 +3468,8 @@ def main():
     app.add_handler(CommandHandler("referral", referral_command))
     app.add_handler(CommandHandler("bantuan", bantuan_command))
     app.add_handler(CommandHandler("dl", dl_video_start))
+    app.add_handler(CommandHandler("khs", khs_menu_handler))
+    app.add_handler(CommandHandler("autoclip", dl_video_start))
 
     # Admin commands
     app.add_handler(CommandHandler("stats", admin_stats_command))
