@@ -215,17 +215,21 @@ def get_dl_format_keyboard(session_key: str, is_slideshow: bool = False):
         ],
         [
             InlineKeyboardButton("🎵 Musik / Audio (MP3)", callback_data=f"dl_act:audio:{session_key}"),
-            InlineKeyboardButton("📸 Unduh Cover / Foto", callback_data=f"dl_act:thumbnail:{session_key}")
+            InlineKeyboardButton("✂️ Auto Clip (9:16 Vertikal)", callback_data=f"dl_act:autoclip:{session_key}")
         ],
-        [InlineKeyboardButton("« Batal", callback_data="main_menu")],
+        [
+            InlineKeyboardButton("📸 Unduh Cover / Foto", callback_data=f"dl_act:thumbnail:{session_key}"),
+            InlineKeyboardButton("« Batal", callback_data="main_menu")
+        ],
     ])
 
 def get_tools_hub_reply_keyboard():
     """Sub-Menu Hub: Seluruh Alat File, Konversi, Foto & Media Video"""
     return ReplyKeyboardMarkup(
         [
-            [KeyboardButton("🎬 DOWNLOAD VIDEO (NO WM)"), KeyboardButton("✂️ Hapus BG & Pasfoto AI")],
-            [KeyboardButton("📄 Word ke PDF"), KeyboardButton("📝 PDF ke Word")],
+            [KeyboardButton("🎬 DOWNLOAD VIDEO (NO WM)"), KeyboardButton("✂️ Auto Clip Video (9:16)")],
+            [KeyboardButton("✂️ Hapus BG & Pasfoto AI"), KeyboardButton("📄 Word ke PDF")],
+            [KeyboardButton("📝 PDF ke Word"), KeyboardButton("🖼️ Foto ke PDF")],
             [KeyboardButton("🖼️ Foto ke PDF"), KeyboardButton("📸 PDF ke Gambar HD")],
             [KeyboardButton("📑 Gabung PDF (Merge)"), KeyboardButton("🔓 Buka Password PDF")],
             [KeyboardButton("🗜️ Kompres Dokumen PDF"), KeyboardButton("🗜️ Kompres Foto (CPNS)")],
@@ -527,10 +531,104 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session_key = parts[2]
         info = MEDIA_DL_SESSIONS.get(session_key)
 
+        if mode == "autoclip":
+            if not info:
+                await query.message.reply_text("⚠️ Sesi unduhan telah kedaluwarsa. Silakan kirimkan kembali tautan video Anda.")
+                return
+            clip_kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("⚡ Auto Split (Tiap 60 Detik Part 1-3)", callback_data=f"clip_opt:split60:{session_key}")],
+                [InlineKeyboardButton("📱 Klip 30 Detik Pertama (9:16 Vertikal)", callback_data=f"clip_opt:first30:{session_key}")],
+                [InlineKeyboardButton("📱 Klip 60 Detik Pertama (9:16 Vertikal)", callback_data=f"clip_opt:first60:{session_key}")],
+                [InlineKeyboardButton("« Kembali ke Format", callback_data=f"dl_preview_back:{session_key}")],
+            ])
+            await query.message.reply_text(
+                f"✂️ <b>AUTO CLIPPER 9:16 (TIKTOK / REELS / SHORTS)</b>\n\n"
+                f"• Judul: <b>{html.escape(info['title'][:70])}</b>\n\n"
+                f"Pilih mode klip otomatis yang diinginkan:",
+                reply_markup=clip_kb,
+                parse_mode="HTML"
+            )
+            return
+
         if not info:
             await query.message.reply_text("⚠️ Sesi unduhan telah kedaluwarsa. Silakan kirimkan kembali tautan video Anda.")
             return
 
+    if data.startswith("clip_opt:"):
+        parts = data.split(":")
+        opt = parts[1]
+        session_key = parts[2]
+        info = MEDIA_DL_SESSIONS.get(session_key)
+        if not info:
+            await query.message.reply_text("⚠️ Sesi video telah kedaluwarsa.")
+            return
+
+        await query.message.reply_text("⏳ <i>Sedang mengunduh sumber video & memproses Auto Clip 9:16 (Vertikal Blur)...</i>", parse_mode="HTML")
+        try:
+            import auto_clipper
+            import tempfile
+            # Unduh video sumber terlebih dahulu
+            res_vid = download_media_custom(info['url'], mode="video_hd", tikwm_cache=info.get('tikwm_data'))
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f_src:
+                f_src.write(res_vid['data'])
+                src_tmp = f_src.name
+
+            dur_total = auto_clipper.get_video_duration(src_tmp)
+
+            if opt == "split60":
+                out_dir = tempfile.mkdtemp()
+                splits = auto_clipper.auto_split_video(src_tmp, out_dir, segment_length=60.0, max_segments=3, to_vertical=True)
+                if not splits:
+                    await query.message.reply_text("❌ Gagal membagi klip video.")
+                else:
+                    await query.message.reply_text(f"✅ Berhasil membuat <b>{len(splits)} Part Klip Vertikal 9:16</b>! Mengirim berkas...", parse_mode="HTML")
+                    for s in splits:
+                        with open(s['path'], 'rb') as f_part:
+                            part_bytes = f_part.read()
+                        bio = io.BytesIO(part_bytes)
+                        bio.name = f"{res_vid['title'][:30]}_Part{s['part']}.mp4"
+                        bio.seek(0)
+                        cap = f"✂️ <b>Part {s['part']} (Durasi {s['time_str']})</b>\n🎬 {html.escape(res_vid['title'][:60])}\n📱 Format Siap TikTok / Reels (9:16)"
+                        await context.bot.send_video(chat_id=query.message.chat_id, video=bio, caption=cap, parse_mode="HTML")
+                        os.remove(s['path'])
+                    os.rmdir(out_dir)
+
+            elif opt in ["first30", "first60"]:
+                dur_clip = 30.0 if opt == "first30" else 60.0
+                out_clip = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+                ok = auto_clipper.clip_video_segment(src_tmp, out_clip, start_sec=0.0, duration_sec=dur_clip, to_vertical=True)
+                if ok:
+                    with open(out_clip, 'rb') as f_c:
+                        c_bytes = f_c.read()
+                    bio = io.BytesIO(c_bytes)
+                    bio.name = f"{res_vid['title'][:30]}_Klip_{int(dur_clip)}s.mp4"
+                    bio.seek(0)
+                    cap = f"✂️ <b>Klip {int(dur_clip)} Detik Vertikal 9:16 Selesai!</b>\n🎬 {html.escape(res_vid['title'][:60])}\n📱 Siap Diunggah ke TikTok / IG Reels / YouTube Shorts"
+                    await context.bot.send_video(chat_id=query.message.chat_id, video=bio, caption=cap, parse_mode="HTML")
+                    os.remove(out_clip)
+                else:
+                    await query.message.reply_text("❌ Gagal merender klip vertikal.")
+
+            os.remove(src_tmp)
+            await query.message.reply_text("Klip selesai! Silakan pilih alat lain di bawah:", reply_markup=get_tools_hub_reply_keyboard())
+        except Exception as e:
+            logger.error(f"Error clip_opt: {e}", exc_info=True)
+            await query.message.reply_text(f"❌ Gagal memproses klip: {e}", reply_markup=get_tools_hub_reply_keyboard())
+        return
+
+    if data.startswith("dl_preview_back:"):
+        session_key = data.split(":")[1]
+        info = MEDIA_DL_SESSIONS.get(session_key)
+        if info:
+            kb = get_dl_format_keyboard(session_key, is_slideshow=info.get('is_slideshow', False))
+            await query.message.reply_text("Pilih format unduhan:", reply_markup=kb)
+        return
+
+    if data.startswith("dl_act:"):
+        parts = data.split(":")
+        mode = parts[1]
+        session_key = parts[2]
+        info = MEDIA_DL_SESSIONS.get(session_key)
         mode_names = {
             "video_hd": "Video HD (Tanpa Watermark)",
             "video_sd": "Video Hemat Kuota (480p)",
@@ -3153,7 +3251,7 @@ def main():
     # Conversation Handler Video Downloader
     dl_video_conv = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.Regex("^(🎬 DOWNLOAD VIDEO \(NO WM\)|🎬 DOWNLOAD VIDEO)$"), dl_video_start),
+            MessageHandler(filters.Regex("^(🎬 DOWNLOAD VIDEO \(NO WM\)|🎬 DOWNLOAD VIDEO|✂️ Auto Clip Video \(9:16\)|✂️ Auto Clip Video)$"), dl_video_start),
             CommandHandler("download", dl_video_start),
             CommandHandler("dl", dl_video_start),
         ],
