@@ -237,23 +237,64 @@ def get_khs_univ_reply_keyboard():
     )
 
 def get_tools_hub_reply_keyboard():
-    """Sub-Menu Hub: Seluruh Alat File, Konversi, Foto & Media Video"""
+    """Sub-Menu Hub: 4 Kategori Utama Kotak Alat (2x2 Compact)"""
     return ReplyKeyboardMarkup(
         [
-            [KeyboardButton("🎬 DOWNLOAD VIDEO (NO WM)"), KeyboardButton("✂️ Auto Clip Video (9:16)")],
-            [KeyboardButton("💱 KURS VALAS LIVE"), KeyboardButton("✂️ Hapus BG & Pasfoto AI")],
-            [KeyboardButton("📄 Word ke PDF"), KeyboardButton("📝 PDF ke Word")],
-            [KeyboardButton("📝 PDF ke Word"), KeyboardButton("🖼️ Foto ke PDF")],
-            [KeyboardButton("🖼️ Foto ke PDF"), KeyboardButton("📸 PDF ke Gambar HD")],
-            [KeyboardButton("📑 Gabung PDF (Merge)"), KeyboardButton("🔓 Buka Password PDF")],
-            [KeyboardButton("🗜️ Kompres Dokumen PDF"), KeyboardButton("🗜️ Kompres Foto (CPNS)")],
-            [KeyboardButton("🖨️ Pasfoto 4R Siap Cetak"), KeyboardButton("🔍 Scan Foto ke Teks (OCR)")],
-            [KeyboardButton("🖋️ Tanda Tangan Transparan"), KeyboardButton("📊 Transkrip Nilai (KHS)")],
+            [KeyboardButton("📑 KELOLA PDF & WORD"), KeyboardButton("🎬 VIDEO & AUTO CLIP")],
+            [KeyboardButton("📸 FOTO, OCR & PASFOTO"), KeyboardButton("💱 KURS & PRODUKTIVITAS")],
             [KeyboardButton("« KEMBALI KE MENU UTAMA")],
         ],
         resize_keyboard=True,
         is_persistent=True,
     )
+
+def get_tools_pdf_reply_keyboard():
+    """Kategori 1: Peralatan Dokumen PDF & Word"""
+    return ReplyKeyboardMarkup(
+        [
+            [KeyboardButton("📄 Word ke PDF"), KeyboardButton("📝 PDF ke Word")],
+            [KeyboardButton("🖼️ Foto ke PDF"), KeyboardButton("📸 PDF ke Gambar HD")],
+            [KeyboardButton("📑 Gabung PDF (Merge)"), KeyboardButton("🔓 Buka Password PDF")],
+            [KeyboardButton("🗜️ Kompres Dokumen PDF"), KeyboardButton("« KEMBALI KE KOTAK ALAT")],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+def get_tools_media_reply_keyboard():
+    """Kategori 2: Peralatan Video & Audio"""
+    return ReplyKeyboardMarkup(
+        [
+            [KeyboardButton("🎬 DOWNLOAD VIDEO (NO WM)"), KeyboardButton("✂️ Auto Clip Video (9:16)")],
+            [KeyboardButton("« KEMBALI KE KOTAK ALAT")],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+def get_tools_photo_reply_keyboard():
+    """Kategori 3: Peralatan Foto, Gambar, Pasfoto & Scan"""
+    return ReplyKeyboardMarkup(
+        [
+            [KeyboardButton("✂️ Hapus BG & Pasfoto AI"), KeyboardButton("🗜️ Kompres Foto (CPNS)")],
+            [KeyboardButton("🖨️ Pasfoto 4R Siap Cetak"), KeyboardButton("🔍 Scan Foto ke Teks (OCR)")],
+            [KeyboardButton("🖋️ Tanda Tangan Transparan"), KeyboardButton("« KEMBALI KE KOTAK ALAT")],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+def get_tools_prod_reply_keyboard():
+    """Kategori 4: Kurs Mata Uang & Utilitas"""
+    return ReplyKeyboardMarkup(
+        [
+            [KeyboardButton("💱 KURS VALAS LIVE"), KeyboardButton("📊 Transkrip Nilai (KHS)")],
+            [KeyboardButton("« KEMBALI KE KOTAK ALAT")],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
 
 def get_profile_hub_reply_keyboard():
     """Sub-Menu Hub: Akun, VIP, Kuota, & Referral"""
@@ -2152,13 +2193,49 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE, KONVERSI & FOTO</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
         return
 
-    # ==================== HUB 2: 🛠️ KOTAK ALAT FILE ====================
-    elif text in ["🛠️ KOTAK ALAT FILE", "🛠️ KOTAK ALAT & KONVERSI", "🛠️ ALAT DOKUMEN & FOTO"]:
+    # ==================== HUB 2: 🛠️ KOTAK ALAT FILE (KATEGORI RAPI) ====================
+    elif text in ["🛠️ KOTAK ALAT FILE", "🛠️ KOTAK ALAT & KONVERSI", "🛠️ ALAT DOKUMEN & FOTO", "« KEMBALI KE KOTAK ALAT", "« KOTAK ALAT"]:
         msg = (
-            "🛠️ <b>KOTAK ALAT FILE, KONVERSI & FOTO</b>\n\n"
-            "Pilih alat produktivitas yang ingin Anda gunakan langsung pada tombol di bawah:"
+            "🛠️ <b>KOTAK ALAT & PRODUKTIVITAS</b>\n\n"
+            "Silakan pilih kategori alat pada tombol di bawah:\n\n"
+            "• 📑 <b>KELOLA PDF & WORD</b>: Konversi, Kompres, Gabung, Buka Sandi\n"
+            "• 🎬 <b>VIDEO & AUTO CLIP</b>: Downloader No-WM & Pemotong 9:16\n"
+            "• 📸 <b>FOTO, OCR & PASFOTO</b>: Hapus BG, Kompres CPNS, Cetak 4R, Scan\n"
+            "• 💱 <b>KURS & PRODUKTIVITAS</b>: Kurs Valas Live & Transkrip KHS"
         )
         await update.message.reply_text(msg, reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
+        return
+
+    elif text == "📑 KELOLA PDF & WORD":
+        msg = (
+            "📑 <b>ALAT PENGELOLA DOKUMEN PDF & WORD</b>\n\n"
+            "Pilih layanan dokumen yang Anda butuhkan pada tombol di bawah:"
+        )
+        await update.message.reply_text(msg, reply_markup=get_tools_pdf_reply_keyboard(), parse_mode="HTML")
+        return
+
+    elif text == "🎬 VIDEO & AUTO CLIP":
+        msg = (
+            "🎬 <b>ALAT VIDEO & PENGUNDUH MEDIA</b>\n\n"
+            "Pilih fitur video pada tombol di bawah:"
+        )
+        await update.message.reply_text(msg, reply_markup=get_tools_media_reply_keyboard(), parse_mode="HTML")
+        return
+
+    elif text == "📸 FOTO, OCR & PASFOTO":
+        msg = (
+            "📸 <b>ALAT FOTO, OCR & PASFOTO STUDIO</b>\n\n"
+            "Pilih fitur pengolah foto pada tombol di bawah:"
+        )
+        await update.message.reply_text(msg, reply_markup=get_tools_photo_reply_keyboard(), parse_mode="HTML")
+        return
+
+    elif text == "💱 KURS & PRODUKTIVITAS":
+        msg = (
+            "💱 <b>KURS VALAS & ALAT PRODUKTIVITAS</b>\n\n"
+            "Pilih layanan utilitas pada tombol di bawah:"
+        )
+        await update.message.reply_text(msg, reply_markup=get_tools_prod_reply_keyboard(), parse_mode="HTML")
         return
 
     # ==================== HUB 3: 👑 PROFIL & VIP ====================
