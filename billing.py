@@ -39,6 +39,64 @@ def init_db():
     """)
     conn.commit()
     conn.close()
+    init_billing_settings()
+
+def init_billing_settings():
+    """Inisialisasi tabel pengaturan harga paket billing jika belum ada"""
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS billing_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TEXT
+    )
+    """)
+    defaults = {
+        "price_quota_10": "5000",
+        "price_vip_30d": "15000",
+        "quota_amount": "10",
+        "vip_days": "30",
+        "daily_free_quota": "3",
+        "referral_bonus": "2",
+        "payment_active": "1"
+    }
+    for k, v in defaults.items():
+        cur.execute("INSERT OR IGNORE INTO billing_settings (key, value, updated_at) VALUES (?, ?, ?)",
+                    (k, v, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+def get_billing_setting(key: str, default: str = "") -> str:
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT value FROM billing_settings WHERE key = ?", (key,))
+        row = cur.fetchone()
+        return row[0] if row else default
+    except Exception:
+        return default
+    finally:
+        conn.close()
+
+def set_billing_setting(key: str, value: str):
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("INSERT OR REPLACE INTO billing_settings (key, value, updated_at) VALUES (?, ?, ?)",
+                (key, str(value), datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+def get_all_billing_settings() -> dict:
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT key, value FROM billing_settings")
+        return dict(cur.fetchall())
+    except Exception:
+        return {}
+    finally:
+        conn.close()
 
 def get_or_create_user(user_id: int, username: str = "", first_name: str = ""):
     conn = sqlite3.connect(DB_PATH)
@@ -126,14 +184,20 @@ def consume_quota(user_id: int) -> bool:
 
 def create_clipku_payment(user_id: int, package_type: str, user_name: str) -> dict:
     """Membuat transaksi pembayaran via Clipku Pay API"""
+    # Ambil harga dinamis dari billing_settings
+    price_q10 = int(get_billing_setting("price_quota_10", "5000"))
+    price_vip = int(get_billing_setting("price_vip_30d", "15000"))
+    q_amount = get_billing_setting("quota_amount", "10")
+    vip_dur = get_billing_setting("vip_days", "30")
+
     if package_type == "quota_10":
-        amount = 5000
-        desc = "Paket Tambahan 10 Kuota Cetak Dokumen"
+        amount = price_q10
+        desc = f"Paket Tambahan {q_amount} Kuota Cetak Dokumen"
     elif package_type == "vip_30d":
-        amount = 15000
-        desc = "Paket VIP Unlimited Cetak Dokumen (30 Hari)"
+        amount = price_vip
+        desc = f"Paket VIP Unlimited Cetak Dokumen ({vip_dur} Hari)"
     else:
-        amount = 5000
+        amount = price_q10
         desc = "Paket Kuota Dokumen Edu"
 
     payload = {
