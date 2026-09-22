@@ -192,12 +192,29 @@ def get_indonesian_name(gender: str = "Male") -> tuple[str, str]:
     last = random.choice(LAST_NAMES_INDO)
     return first, last
 
-def get_main_reply_keyboard():
-    """Reply Keyboard Utama: Format 2x2 Sangat Lega & Ramping"""
+def get_main_reply_keyboard(user_id=None):
+    """Reply Keyboard Utama: Format 2x2, otomatis menambahkan tombol PANEL ADMIN jika akun admin"""
+    rows = [
+        [KeyboardButton("🎓 BUAT DOKUMEN"), KeyboardButton("🛠️ KOTAK ALAT FILE")],
+        [KeyboardButton("👑 PROFIL & VIP"), KeyboardButton("ℹ️ PANDUAN & BANTUAN")],
+    ]
+    if user_id and user_id in ADMIN_IDS:
+        rows.append([KeyboardButton("⚡ PANEL KENDALI ADMIN")])
+
+    return ReplyKeyboardMarkup(
+        rows,
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+def get_admin_hub_reply_keyboard():
+    """Reply Keyboard Khusus SuperAdmin: Kendali Penuh Seluruh Sistem"""
     return ReplyKeyboardMarkup(
         [
-            [KeyboardButton("🎓 BUAT DOKUMEN"), KeyboardButton("🛠️ KOTAK ALAT FILE")],
-            [KeyboardButton("👑 PROFIL & VIP"), KeyboardButton("ℹ️ PANDUAN & BANTUAN")],
+            [KeyboardButton("📊 STATISTIK & OMZET"), KeyboardButton("💰 KENDALI BILLING & HARGA")],
+            [KeyboardButton("👑 TAMBAH VIP PENGGUNA"), KeyboardButton("🎁 TAMBAH KUOTA GRATIS")],
+            [KeyboardButton("📢 BROADCAST PENGUMUMAN"), KeyboardButton("💾 BACKUP DATABASE SEKARANG")],
+            [KeyboardButton("« KEMBALI KE MENU UTAMA")],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -314,16 +331,10 @@ def get_tools_prod_reply_keyboard():
 
 
 def get_profile_hub_reply_keyboard():
-    """Sub-Menu Hub: Akun, VIP, Kuota, & Referral (Harga Dinamis)"""
-    from billing import get_billing_setting
-    p_q10 = int(get_billing_setting("price_quota_10", "5000"))
-    p_vip = int(get_billing_setting("price_vip_30d", "15000"))
-    q_amt = get_billing_setting("quota_amount", "10")
-    vip_d = get_billing_setting("vip_days", "30")
-
+    """Sub-Menu Hub: Akun, VIP, Kuota, & Referral"""
     return ReplyKeyboardMarkup(
         [
-            [KeyboardButton(f"⚡ Beli +{q_amt} Kuota (Rp {p_q10:,})"), KeyboardButton(f"👑 Beli VIP {vip_d} Hari (Rp {p_vip:,})")],
+            [KeyboardButton("⚡ Beli +10 Kuota (Rp 5.000)"), KeyboardButton("👑 Beli VIP 30 Hari (Rp 15.000)")],
             [KeyboardButton("🎁 Ambil Tautan Referral"), KeyboardButton("« KEMBALI KE MENU UTAMA")],
         ],
         resize_keyboard=True,
@@ -569,7 +580,7 @@ Halo <b>{name}</b> (<code>{user.id}</code>)
     # HANYA kirim pesan ber-ReplyKeyboardMarkup di bawah HP (TIDAK ADA inline button di chat!)
     await update.message.reply_text(
         caption,
-        reply_markup=get_main_reply_keyboard(),
+        reply_markup=get_main_reply_keyboard(user.id),
         parse_mode="HTML"
     )
 
@@ -602,69 +613,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
 
-    # Handler Callback Panel Admin Billing
-    if data.startswith("adm_set:"):
-        key = data.split(":")[1]
-        context.user_data["awaiting_admin_billing_key"] = key
-        label_map = {
-            "price_quota_10": "Harga Paket Topup Kuota (Rp)",
-            "price_vip_30d": "Harga Paket VIP Unlimited (Rp)",
-            "quota_amount": "Jumlah Kuota Tambahan (misal: 10 atau 15)",
-            "vip_days": "Jumlah Durasi Hari VIP (misal: 30 atau 60)",
-            "daily_free_quota": "Kuota Gratis Harian Pengguna (misal: 3)",
-            "referral_bonus": "Bonus Kuota Referral per Teman (misal: 2)",
-        }
-        lbl = label_map.get(key, key)
-        await query.message.reply_text(
-            f"✏️ <b>Ubah {lbl}:</b>\n\n"
-            f"Silakan ketikkan nilai angka baru sekarang di obrolan bot:",
-            parse_mode="HTML"
-        )
-        return
-
-    elif data == "adm_bill_refresh":
-        from billing import get_all_billing_settings
-        st = get_all_billing_settings()
-        p_q10 = int(st.get("price_quota_10", "5000"))
-        p_vip = int(st.get("price_vip_30d", "15000"))
-        q_amt = st.get("quota_amount", "10")
-        vip_d = st.get("vip_days", "30")
-        daily_q = st.get("daily_free_quota", "3")
-        ref_b = st.get("referral_bonus", "2")
-        status_p = "✅ AKTIF" if st.get("payment_active", "1") == "1" else "⛔ MAINTENANCE"
-
-        text = (
-            "👑 <b>PANEL KENDALI BILLING & HARGA (ADMIN)</b>\n\n"
-            f"• Status Gateway QRIS: <b>{status_p}</b>\n"
-            f"• Harga Paket Kuota (+{q_amt}): <b>Rp {p_q10:,}</b>\n"
-            f"• Harga Paket VIP ({vip_d} Hari): <b>Rp {p_vip:,}</b>\n"
-            f"• Kuota Gratis Harian User: <b>{daily_q}x per hari</b>\n"
-            f"• Bonus Kuota Referral: <b>+{ref_b} per teman</b>\n\n"
-            "💡 <i>Gunakan tombol di bawah untuk mengubah nilai secara langsung:</i>"
-        )
-        kb = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✏️ Ubah Harga +10 Kuota", callback_data="adm_set:price_quota_10"),
-                InlineKeyboardButton("✏️ Ubah Harga VIP 30 Hari", callback_data="adm_set:price_vip_30d"),
-            ],
-            [
-                InlineKeyboardButton("✏️ Ubah Jumlah Kuota Topup", callback_data="adm_set:quota_amount"),
-                InlineKeyboardButton("✏️ Ubah Durasi Hari VIP", callback_data="adm_set:vip_days"),
-            ],
-            [
-                InlineKeyboardButton("✏️ Ubah Kuota Gratis Harian", callback_data="adm_set:daily_free_quota"),
-                InlineKeyboardButton("✏️ Ubah Bonus Referral", callback_data="adm_set:referral_bonus"),
-            ],
-            [
-                InlineKeyboardButton("🔄 Refresh Data", callback_data="adm_bill_refresh"),
-                InlineKeyboardButton("« Tutup", callback_data="main_menu"),
-            ]
-        ])
-        await query.edit_message_text(text, reply_markup=kb, parse_mode="HTML")
-        return
-
     # 1. Navigasi Menu Utama
-    elif data.startswith("dl_act:"):
+    if data.startswith("dl_act:"):
         parts = data.split(":")
         mode = parts[1]
         session_key = parts[2]
@@ -1836,138 +1786,6 @@ async def bantuan_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(help_text, reply_markup=kb, parse_mode="HTML")
 
 
-
-# ==================== SUITE KENDALI ADMIN BILLING & HARGA ====================
-
-async def admin_billing_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Perintah Admin /billing untuk melihat & mengatur seluruh harga paket pembayaran"""
-    user_id = update.effective_user.id
-    if user_id not in ADMIN_IDS:
-        return
-
-    from billing import get_all_billing_settings
-    st = get_all_billing_settings()
-
-    p_q10 = int(st.get("price_quota_10", "5000"))
-    p_vip = int(st.get("price_vip_30d", "15000"))
-    q_amt = st.get("quota_amount", "10")
-    vip_d = st.get("vip_days", "30")
-    daily_q = st.get("daily_free_quota", "3")
-    ref_b = st.get("referral_bonus", "2")
-    status_p = "✅ AKTIF" if st.get("payment_active", "1") == "1" else "⛔ MAINTENANCE"
-
-    kb = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("✏️ Ubah Harga +10 Kuota", callback_data="adm_set:price_quota_10"),
-            InlineKeyboardButton("✏️ Ubah Harga VIP 30 Hari", callback_data="adm_set:price_vip_30d"),
-        ],
-        [
-            InlineKeyboardButton("✏️ Ubah Jumlah Kuota Topup", callback_data="adm_set:quota_amount"),
-            InlineKeyboardButton("✏️ Ubah Durasi Hari VIP", callback_data="adm_set:vip_days"),
-        ],
-        [
-            InlineKeyboardButton("✏️ Ubah Kuota Gratis Harian", callback_data="adm_set:daily_free_quota"),
-            InlineKeyboardButton("✏️ Ubah Bonus Referral", callback_data="adm_set:referral_bonus"),
-        ],
-        [
-            InlineKeyboardButton("🔄 Refresh Data", callback_data="adm_bill_refresh"),
-            InlineKeyboardButton("« Tutup", callback_data="main_menu"),
-        ]
-    ])
-
-    text = (
-        "👑 <b>PANEL KENDALI BILLING & HARGA (ADMIN)</b>\n\n"
-        f"• Status Gateway QRIS: <b>{status_p}</b>\n"
-        f"• Harga Paket Kuota (+{q_amt}): <b>Rp {p_q10:,}</b>\n"
-        f"• Harga Paket VIP ({vip_d} Hari): <b>Rp {p_vip:,}</b>\n"
-        f"• Kuota Gratis Harian User: <b>{daily_q}x per hari</b>\n"
-        f"• Bonus Kuota Referral: <b>+{ref_b} per teman</b>\n\n"
-        "💡 <i>Anda dapat mengubah parameter langsung via tombol di bawah atau ketik perintah:</i>\n"
-        "• <code>/setprice quota 5000</code>\n"
-        "• <code>/setprice vip 15000</code>\n"
-        "• <code>/setvip [USER_ID] [JUMLAH_HARI]</code>\n"
-        "• <code>/addquota [USER_ID] [JUMLAH]</code>"
-    )
-    await update.message.reply_text(text, reply_markup=kb, parse_mode="HTML")
-
-async def admin_setprice_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Perintah cepat: /setprice [quota|vip] [NOMINAL_RUPIAH]"""
-    user_id = update.effective_user.id
-    if user_id not in ADMIN_IDS:
-        return
-
-    args = context.args
-    if len(args) < 2:
-        await update.message.reply_text(
-            "Format:\n"
-            "• <code>/setprice quota 7000</code> (Ubah harga paket kuota)\n"
-            "• <code>/setprice vip 20000</code> (Ubah harga paket VIP 30 hari)",
-            parse_mode="HTML"
-        )
-        return
-
-    target = args[0].lower().strip()
-    val_str = re.sub(r"[^\d]", "", args[1])
-    try:
-        val = int(val_str)
-        if val < 500:
-            await update.message.reply_text("⚠️ Minimal nominal Rp 500.")
-            return
-
-        from billing import set_billing_setting
-        if target in ["quota", "kuota"]:
-            set_billing_setting("price_quota_10", str(val))
-            await update.message.reply_text(f"✅ Harga Paket Kuota berhasil diubah menjadi: <b>Rp {val:,}</b>", parse_mode="HTML")
-        elif target in ["vip", "unlimited"]:
-            set_billing_setting("price_vip_30d", str(val))
-            await update.message.reply_text(f"✅ Harga Paket VIP Unlimited berhasil diubah menjadi: <b>Rp {val:,}</b>", parse_mode="HTML")
-        else:
-            await update.message.reply_text("⚠️ Target tidak valid. Gunakan 'quota' atau 'vip'.")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Gagal: {e}")
-
-async def admin_setvip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Perintah Admin untuk mengaktifkan VIP secara manual ke user: /setvip [USER_ID] [HARI]"""
-    user_id = update.effective_user.id
-    if user_id not in ADMIN_IDS:
-        return
-
-    args = context.args
-    if len(args) < 2:
-        await update.message.reply_text("Format: <code>/setvip [USER_ID] [JUMLAH_HARI]</code>\nContoh: <code>/setvip 5606826328 30</code>", parse_mode="HTML")
-        return
-
-    try:
-        target_id = int(args[0])
-        days = int(args[1])
-        from datetime import timedelta
-        import sqlite3
-        vip_until = (datetime.now() + timedelta(days=days)).isoformat()
-
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        cur.execute("UPDATE users SET is_vip = 1, vip_until = ? WHERE user_id = ?", (vip_until, target_id))
-        conn.commit()
-        conn.close()
-
-        await update.message.reply_text(
-            f"👑 <b>Status VIP Berhasil Diaktifkan!</b>\n\n"
-            f"• Target User ID: <code>{target_id}</code>\n"
-            f"• Durasi: <b>{days} Hari</b>\n"
-            f"• Aktif Hingga: <b>{vip_until[:10]}</b>",
-            parse_mode="HTML"
-        )
-        try:
-            await context.bot.send_message(
-                chat_id=target_id,
-                text=f"👑 <b>Selamat! Admin telah mengaktifkan status VIP UNLIMITED ({days} Hari) ke akun Anda!</b>\nNikmati bebas cetak seluruh dokumen tanpa potongan kuota.",
-                parse_mode="HTML"
-            )
-        except Exception:
-            pass
-    except Exception as e:
-        await update.message.reply_text(f"❌ Gagal: {e}")
-
 async def admin_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Perintah Admin /stats untuk melihat metrik bot"""
     user_id = update.effective_user.id
@@ -2153,7 +1971,7 @@ async def handle_generate_ktm_action(update: Update, context: ContextTypes.DEFAU
         await update.message.reply_text(
             "⚠️ <b>Kuota Cetak Harian Anda Telah Habis!</b>\n\n"
             "Kuota gratis Anda sudah terpakai. Silakan isi ulang kuota atau langganan VIP di menu 👑 PROFIL & VIP.",
-            reply_markup=get_main_reply_keyboard(),
+            reply_markup=get_main_reply_keyboard(user.id),
             parse_mode="HTML"
         )
         return
@@ -2267,6 +2085,11 @@ async def handle_buy_pkg_action(update: Update, context: ContextTypes.DEFAULT_TY
         await status_msg.edit_text(f"❌ Gagal membuat pembayaran: {html.escape(err_msg)}", parse_mode="HTML")
 
 async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Router Hub 2x2: Bersih, Cepat, dan Sangat Lega di Layar HP"""
+    text = (update.message.text or "").strip()
+    user = update.effective_user
+    u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
+
     # Tangkap input teks pengubahan setting billing admin
     if context.user_data.get("awaiting_admin_billing_key") and user.id in ADMIN_IDS:
         key = context.user_data.pop("awaiting_admin_billing_key")
@@ -2279,11 +2102,6 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         else:
             await update.message.reply_text("⚠️ Nilai angka tidak valid. Pembatalan dilakukan.")
             return
-
-    """Router Hub 2x2: Bersih, Cepat, dan Sangat Lega di Layar HP"""
-    text = update.message.text.strip()
-    user = update.effective_user
-    u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
 
     
     # Smart Auto-Detect Kurs Mata Uang (contoh: '$150', '50 sgd to idr', '2000 myr')
@@ -2342,6 +2160,77 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     if text in ktm_map:
         await handle_generate_ktm_action(update, context, ktm_map[text])
         return
+
+
+    # ==================== HUB ADMIN KHUSUS ====================
+    elif text in ["⚡ PANEL KENDALI ADMIN", "PANEL ADMIN", "ADMIN"]:
+        if user.id not in ADMIN_IDS:
+            return
+        msg = (
+            "👑 <b>PUSAT KENDALI SUPERADMIN YOWES</b>\n\n"
+            "Halo Admin Kancilpay! 👋\n"
+            "Silakan pilih menu manajemen yang ingin Anda operasikan langsung pada tombol di bawah:\n\n"
+            "• 📊 <b>STATISTIK & OMZET</b>: Pantau total user, VIP, dan omzet QRIS\n"
+            "• 💰 <b>KENDALI BILLING & HARGA</b>: Ubah tarif paket kuota & VIP seketika\n"
+            "• 👑 <b>TAMBAH VIP PENGGUNA</b>: Berikan status VIP manual ke user\n"
+            "• 🎁 <b>TAMBAH KUOTA GRATIS</b>: Suntikkan kuota tambahan ke pengguna\n"
+            "• 📢 <b>BROADCAST PENGUMUMAN</b>: Kirim pesan massal ke seluruh user\n"
+            "• 💾 <b>BACKUP DATABASE</b>: Kirim snapshot users.db ke chat ini"
+        )
+        await update.message.reply_text(msg, reply_markup=get_admin_hub_reply_keyboard(), parse_mode="HTML")
+        return
+
+    elif text == "📊 STATISTIK & OMZET":
+        if user.id in ADMIN_IDS:
+            await admin_stats_command(update, context)
+            return
+
+    elif text == "💰 KENDALI BILLING & HARGA":
+        if user.id in ADMIN_IDS:
+            await admin_billing_command(update, context)
+            return
+
+    elif text == "👑 TAMBAH VIP PENGGUNA":
+        if user.id in ADMIN_IDS:
+            await update.message.reply_text(
+                "👑 <b>Aktivasi VIP Pengguna Manual:</b>\n\n"
+                "Ketikkan perintah dengan format:\n"
+                "<code>/setvip [USER_ID] [JUMLAH_HARI]</code>\n\n"
+                "<i>Contoh:</i> <code>/setvip 5606826328 30</code>",
+                parse_mode="HTML"
+            )
+            return
+
+    elif text == "🎁 TAMBAH KUOTA GRATIS":
+        if user.id in ADMIN_IDS:
+            await update.message.reply_text(
+                "🎁 <b>Tambah Kuota Pengguna Manual:</b>\n\n"
+                "Ketikkan perintah dengan format:\n"
+                "<code>/addquota [USER_ID] [JUMLAH]</code>\n\n"
+                "<i>Contoh:</i> <code>/addquota 5606826328 20</code>",
+                parse_mode="HTML"
+            )
+            return
+
+    elif text == "📢 BROADCAST PENGUMUMAN":
+        if user.id in ADMIN_IDS:
+            await update.message.reply_text(
+                "📢 <b>Kirim Siaran Broadcast Massal:</b>\n\n"
+                "Ketikkan perintah dengan format:\n"
+                "<code>/broadcast [PESAN_PENGUMUMAN]</code>\n\n"
+                "<i>Contoh:</i> <code>/broadcast Halo! Server telah di-update dengan fitur baru.</code>",
+                parse_mode="HTML"
+            )
+            return
+
+    elif text == "💾 BACKUP DATABASE SEKARANG":
+        if user.id in ADMIN_IDS:
+            await update.message.reply_text("⏳ <i>Membuat snapshot database SQLite dan mengirimkan ke chat...</i>", parse_mode="HTML")
+            import backup_and_clean
+            ok = backup_and_clean.backup_database_to_telegram()
+            if not ok:
+                await update.message.reply_text("❌ Gagal mengirim backup.")
+            return
 
     # ==================== HUB 1: 🎓 BUAT DOKUMEN ====================
     elif text == "🎓 BUAT DOKUMEN":
@@ -2488,15 +2377,7 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text(msg, reply_markup=get_profile_hub_reply_keyboard(), parse_mode="HTML")
         return
 
-    # Handler Tombol Pembelian Paket Kuota / VIP dari Reply Keyboard (Mendukung Harga Dinamis)
-    elif "Beli" in text and "Kuota" in text:
-        await handle_buy_pkg_action(update, context, "quota_10")
-        return
-
-    elif "Beli" in text and "VIP" in text:
-        await handle_buy_pkg_action(update, context, "vip_30d")
-        return
-
+    # Handler Tombol Pembelian Paket Kuota / VIP dari Reply Keyboard
     elif text in ["⚡ Beli +10 Kuota (Rp 5.000)", "⚡ Beli +10 Kuota", "Beli Kuota"]:
         await handle_buy_pkg_action(update, context, "quota_10")
         return
@@ -2801,7 +2682,7 @@ async def rembg_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ <b>Kuota Anda Habis!</b>\n\n"
             "Fitur Hapus Background AI HD memerlukan 1 kuota per foto (atau aktifkan VIP Unlimited 30 Hari).\n"
             "Silakan pilih menu <b>💰 SALDO & KUOTA</b> untuk top up.",
-            reply_markup=get_main_reply_keyboard(),
+            reply_markup=get_main_reply_keyboard(user.id),
             parse_mode="HTML"
         )
         return ConversationHandler.END
@@ -2920,7 +2801,7 @@ async def rembg_color_received(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_document(
             document=bio,
             caption=caption,
-            reply_markup=get_main_reply_keyboard(),
+            reply_markup=get_main_reply_keyboard(user.id),
             parse_mode="HTML"
         )
         return ConversationHandler.END
@@ -4376,9 +4257,6 @@ def main():
     app.add_handler(CommandHandler("stats", admin_stats_command))
     app.add_handler(CommandHandler("addquota", admin_addquota_command))
     app.add_handler(CommandHandler("broadcast", admin_broadcast_command))
-    app.add_handler(CommandHandler("billing", admin_billing_command))
-    app.add_handler(CommandHandler("setprice", admin_setprice_command))
-    app.add_handler(CommandHandler("setvip", admin_setvip_command))
 
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_button_handler))
