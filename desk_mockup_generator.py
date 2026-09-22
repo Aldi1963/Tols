@@ -1,9 +1,12 @@
 from io import BytesIO
-from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
+from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageChops
 import math
 import random
 import os
 from pathlib import Path
+
+BASE_DIR = Path(__file__).parent
+WOOD_ASSET_PATH = BASE_DIR / "countries" / "assets" / "wood_table_master.jpg"
 
 def find_perspective_coeffs(source_pts, target_pts):
     matrix = []
@@ -41,93 +44,159 @@ def find_perspective_coeffs(source_pts, target_pts):
 
     return B
 
-def create_photorealistic_desk(width=2048, height=1365):
-    img = Image.new("RGB", (width, height), (75, 48, 30))
-    draw = ImageDraw.Draw(img)
+def load_flawless_wood_desk(width=2048, height=1365) -> Image.Image:
+    if WOOD_ASSET_PATH.exists():
+        try:
+            w_img = Image.open(WOOD_ASSET_PATH).convert("RGB")
+            cur_w, cur_h = w_img.size
+            scale = max(width / cur_w, height / cur_h) * 1.35
+            new_w, new_h = int(cur_w * scale), int(cur_h * scale)
+            w_resized = w_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            
+            w_rot = w_resized.rotate(8, resample=Image.Resampling.BICUBIC, expand=False)
+            cx, cy = new_w // 2, new_h // 2
+            x0 = cx - width // 2
+            y0 = cy - height // 2
+            table = w_rot.crop((x0, y0, x0 + width, y0 + height))
 
-    for y in range(height):
-        light_factor = 1.0 - (y / height) * 0.35
-        r_base = int(88 * light_factor)
-        g_base = int(54 * light_factor)
-        b_base = int(34 * light_factor)
-        draw.line([(0, y), (width, y)], fill=(r_base, g_base, b_base))
+            table = table.filter(ImageFilter.GaussianBlur(radius=0.7))
+            table = ImageEnhance.Color(table).enhance(1.18)
+            table = ImageEnhance.Contrast(table).enhance(1.08)
 
-    for y in range(0, height, 3):
-        variance = int(math.sin(y * 0.08) * 12 + math.cos(y * 0.02) * 8)
-        color_w = (max(0, min(255, 78 + variance)), max(0, min(255, 48 + variance)), max(0, min(255, 30 + variance)))
-        draw.line([(0, y), (width, y)], fill=color_w, width=2)
+            # Pencahayaan hangat jendela
+            lighting = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            l_draw = ImageDraw.Draw(lighting)
+            l_draw.ellipse([(-width * 0.1, -height * 0.2), (width * 0.95, height * 0.85)], fill=(255, 245, 225, 75))
+            lighting = lighting.filter(ImageFilter.GaussianBlur(radius=90))
 
-    img = img.filter(ImageFilter.GaussianBlur(radius=5.5))
-    return img
+            vignette = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            v_draw = ImageDraw.Draw(vignette)
+            for r in range(width, int(width * 0.35), -50):
+                alpha = int((1.0 - r / width) * 75)
+                v_draw.ellipse([(width - r, height - int(r * 0.7)), (width + r, height + int(r * 0.7))], fill=(10, 6, 3, alpha))
+            vignette = vignette.filter(ImageFilter.GaussianBlur(radius=60))
+
+            t_rgba = table.convert("RGBA")
+            t_rgba = Image.alpha_composite(t_rgba, lighting)
+            t_rgba = Image.alpha_composite(t_rgba, vignette)
+            return t_rgba.convert("RGB")
+        except Exception as e:
+            print(f"Fallback wood: {e}")
+
+    return Image.new("RGB", (width, height), (125, 82, 54))
 
 def render_card_on_desk(card_image_bytes: bytes) -> bytes:
-    """Simulasi foto kartu fisik di atas meja kayu dengan sudut miring 3D & ambient occlusion"""
+    """
+    FOTO FISIK ASLI KARTU DI ATAS MEJA KAYU (Ultra Photorealistic with Ambient Color Bounce):
+    1. Ambient Light Bounce dari meja kayu cokelat ke kartu (Color Bleed Integration)
+    2. Zero black edges pada kanvas
+    3. Sudut rounded PVC bersih 32px
+    4. Oklusi kontak pekat menempel erat di serat meja
+    """
     card_raw = Image.open(BytesIO(card_image_bytes)).convert("RGBA")
     cw, ch = card_raw.size
 
-    # Efek laminasi PVC halus
+    # Ambient Light Bounce: Cahaya hangat kayu memantul lembut ke dasar kartu (Warm Teak Bounce)
+    bounce_layer = Image.new("RGBA", (cw, ch), (145, 95, 55, 0))
+    b_draw = ImageDraw.Draw(bounce_layer)
+    # Gradasi pantulan dari bawah ke atas kartu
+    for y in range(int(ch * 0.5), ch, 4):
+        f = (y - ch * 0.5) / (ch * 0.5)
+        op = int(f * 32)
+        b_draw.line([(0, y), (cw, y)], fill=(155, 105, 60, op))
+    bounce_layer = bounce_layer.filter(ImageFilter.GaussianBlur(radius=15))
+    card_integrated = Image.alpha_composite(card_raw, bounce_layer)
+
+    # Sentuhan temperatur kehangatan ruangan secara umum
+    room_tint = Image.new("RGBA", (cw, ch), (255, 246, 230, 22))
+    card_warmed = Image.alpha_composite(card_integrated, room_tint)
+
+    # Mask sudut membulat presisi tinggi
+    corner_mask = Image.new("L", (cw, ch), 0)
+    cm_draw = ImageDraw.Draw(corner_mask)
+    cm_draw.rounded_rectangle([(0, 0), (cw, ch)], radius=32, fill=255)
+    
+    card_clean = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+    card_clean.paste(card_warmed, (0, 0), mask=corner_mask)
+
+    # Kilau pantulan cahaya ruangan alami di permukaan kartu
     glare = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
     g_draw = ImageDraw.Draw(glare)
-    g_draw.polygon([(0, int(ch * 0.35)), (int(cw * 0.65), 0), (cw, int(ch * 0.25)), (0, ch)], fill=(255, 255, 255, 24))
-    glare = glare.filter(ImageFilter.GaussianBlur(radius=32))
-
-    card_pvc = Image.alpha_composite(card_raw, glare)
+    g_draw.polygon([(-cw * 0.2, ch * 0.35), (cw * 0.6, -ch * 0.2), (cw * 0.95, -ch * 0.2), (-cw * 0.2, ch * 0.85)], fill=(255, 252, 240, 36))
+    glare = glare.filter(ImageFilter.GaussianBlur(radius=30))
+    card_pvc = Image.alpha_composite(card_clean, glare)
 
     dw, dh = 2048, 1365
-    desk = create_photorealistic_desk(dw, dh)
+    desk = load_flawless_wood_desk(dw, dh)
 
+    # Koordinat sudut kartu di atas meja
     src_pts = [(0, 0), (cw, 0), (cw, ch), (0, ch)]
-    p0 = (420, 290)
-    p1 = (1560, 210)
-    p2 = (1490, 980)
-    p3 = (310, 1070)
+    p0 = (430, 315)
+    p1 = (1580, 230)
+    p2 = (1495, 1025)
+    p3 = (315, 1110)
     dst_pts = [p0, p1, p2, p3]
 
     coeffs = find_perspective_coeffs(src_pts, dst_pts)
 
-    shadow_combined = Image.new("RGBA", (dw, dh), (0, 0, 0, 0))
-    sh_diff = Image.new("RGBA", (dw, dh), (0, 0, 0, 0))
-    sh1_draw = ImageDraw.Draw(sh_diff)
-    sh1_pts = [(pt[0] + 32, pt[1] + 42) for pt in dst_pts]
-    sh1_draw.polygon(sh1_pts, fill=(0, 0, 0, 130))
-    sh_diff = sh_diff.filter(ImageFilter.GaussianBlur(radius=38))
+    # SISTEM BAYANGAN MULTI-LAYER (Deep Ambient Occlusion & Directional Falloff)
+    shadow_layer = Image.new("RGBA", (dw, dh), (0, 0, 0, 0))
+    s_draw = ImageDraw.Draw(shadow_layer)
 
-    sh_ao = Image.new("RGBA", (dw, dh), (0, 0, 0, 0))
-    sh2_draw = ImageDraw.Draw(sh_ao)
-    sh2_pts = [(pt[0] + 8, pt[1] + 10) for pt in dst_pts]
-    sh2_draw.polygon(sh2_pts, fill=(0, 0, 0, 200))
-    sh_ao = sh_ao.filter(ImageFilter.GaussianBlur(radius=10))
+    # A. Bayangan penumbra jatuh arah kanan-bawah (cahaya jendela lembut)
+    sh_diff_pts = [(pt[0] + 52, pt[1] + 66) for pt in dst_pts]
+    s_draw.polygon(sh_diff_pts, fill=(0, 0, 0, 140))
+    shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=38))
 
-    shadow_combined.paste(sh_diff, (0, 0), sh_diff)
-    shadow_combined.paste(sh_ao, (0, 0), sh_ao)
+    # B. Bayangan menengah (Mid Directional Shadow)
+    sh_mid = Image.new("RGBA", (dw, dh), (0, 0, 0, 0))
+    sm_draw = ImageDraw.Draw(sh_mid)
+    sh_mid_pts = [(pt[0] + 22, pt[1] + 28) for pt in dst_pts]
+    sm_draw.polygon(sh_mid_pts, fill=(0, 0, 0, 190))
+    sh_mid = sh_mid.filter(ImageFilter.GaussianBlur(radius=16))
 
+    # C. Oklusi Kontak Gelap Pekat (Ultra-Deep Contact Occlusion)
+    sh_contact = Image.new("RGBA", (dw, dh), (0, 0, 0, 0))
+    sh_c_draw = ImageDraw.Draw(sh_contact)
+    sh_c_draw.line([(p3[0] + 6, p3[1] + 8), (p2[0] + 6, p2[1] + 8)], fill=(0, 0, 0, 255), width=28)
+    sh_c_draw.line([(p2[0] + 6, p2[1] + 8), (p1[0] + 6, p1[1] + 8)], fill=(0, 0, 0, 255), width=24)
+    sh_c_draw.line([(p0[0] + 3, p0[1] + 4), (p3[0] + 3, p3[1] + 4)], fill=(0, 0, 0, 240), width=16)
+    sh_c_draw.line([(p1[0] + 3, p1[1] + 4), (p0[0] + 3, p0[1] + 4)], fill=(0, 0, 0, 220), width=12)
+    sh_c_pts = [(pt[0] + 4, pt[1] + 5) for pt in dst_pts]
+    sh_c_draw.polygon(sh_c_pts, fill=(0, 0, 0, 255))
+    sh_contact = sh_contact.filter(ImageFilter.GaussianBlur(radius=6.0))
+
+    # Gabungkan bayangan ke meja kayu
+    desk_rgba = desk.convert("RGBA")
+    desk_rgba.paste(shadow_layer, (0, 0), shadow_layer)
+    desk_rgba.paste(sh_mid, (0, 0), sh_mid)
+    desk_rgba.paste(sh_contact, (0, 0), sh_contact)
+
+    # Transformasi kartu dengan filter bicubic halus
     warped_card = card_pvc.transform((dw, dh), Image.PERSPECTIVE, coeffs, Image.Resampling.BICUBIC)
 
-    rim_layer = Image.new("RGBA", (dw, dh), (0, 0, 0, 0))
-    r_draw = ImageDraw.Draw(rim_layer)
-    rim_pts = [(pt[0] + 3, pt[1] + 4) for pt in dst_pts]
-    r_draw.polygon(rim_pts, outline=(235, 238, 245, 190), width=2)
-    rim_layer = rim_layer.filter(ImageFilter.GaussianBlur(radius=1))
+    # Mask kartu bersih tanpa artefak
+    mask_dw = corner_mask.transform((dw, dh), Image.PERSPECTIVE, coeffs, Image.Resampling.BICUBIC)
+    mask_dw = mask_dw.filter(ImageFilter.GaussianBlur(radius=0.5))
 
-    final_img = desk.convert("RGBA")
-    final_img.paste(shadow_combined, (0, 0), shadow_combined)
-    final_img.paste(rim_layer, (0, 0), rim_layer)
-    final_img.paste(warped_card, (0, 0), warped_card)
+    # Tempel kartu ke meja kayu
+    desk_rgba.paste(warped_card, (0, 0), mask=mask_dw)
 
-    final_rgb = final_img.convert("RGB").filter(ImageFilter.SMOOTH_MORE)
+    final_rgb = desk_rgba.convert("RGB")
 
+    # Grain optik sensor kamera nyata (Apple iPhone 14 Pro sensor simulation)
     noise_layer = Image.new("RGB", (dw, dh), (128, 128, 128))
     n_draw = ImageDraw.Draw(noise_layer)
-    for _ in range(25000):
+    for _ in range(15000):
         nx = random.randint(0, dw - 1)
         ny = random.randint(0, dh - 1)
-        nv = random.randint(90, 165)
+        nv = random.randint(105, 150)
         n_draw.point((nx, ny), fill=(nv, nv, nv))
-    noise_layer = noise_layer.filter(ImageFilter.GaussianBlur(radius=0.7))
-    final_rgb = Image.blend(final_rgb, noise_layer, alpha=0.035)
+    noise_layer = noise_layer.filter(ImageFilter.GaussianBlur(radius=0.5))
+    final_rgb = Image.blend(final_rgb, noise_layer, alpha=0.018)
 
     out_buf = BytesIO()
-    final_rgb.save(out_buf, format="JPEG", quality=94)
+    final_rgb.save(out_buf, format="JPEG", quality=95)
     return out_buf.getvalue()
 
 def render_lanyard_card_holder(card_image_bytes: bytes, univ_code: str = "UT") -> bytes:
@@ -144,7 +213,7 @@ def render_lanyard_card_holder(card_image_bytes: bytes, univ_code: str = "UT") -
     ribbon_bg, ribbon_text_c, univ_name = lanyard_colors.get(univ_code.upper(), ((30, 45, 80), (240, 240, 240), "STUDENT CARD"))
 
     dw, dh = 2048, 1365
-    desk = create_photorealistic_desk(dw, dh)
+    desk = load_flawless_wood_desk(dw, dh)
 
     mika_pad_x = 24
     mika_pad_y = 24
@@ -241,7 +310,7 @@ def render_handheld_pov(card_image_bytes: bytes) -> bytes:
     cw, ch = card_raw.size
 
     dw, dh = 2048, 1365
-    desk = create_photorealistic_desk(dw, dh)
+    desk = load_flawless_wood_desk(dw, dh)
 
     src_pts = [(0, 0), (cw, 0), (cw, ch), (0, ch)]
     p0 = (380, 260)
