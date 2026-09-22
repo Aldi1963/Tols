@@ -1,3 +1,4 @@
+from typing import Optional, Dict, Any, List
 import os
 import sys
 import logging
@@ -1885,7 +1886,7 @@ def generate_single_for_country(country_code: str, target_doc: str):
 
 # ==================== HANDLER GENERATOR KTM DARI REPLY KEYBOARD ====================
 
-async def handle_generate_ktm_action(update: Update, context: ContextTypes.DEFAULT_TYPE, univ_code: Optional[str] = None):
+async def handle_generate_ktm_action(update: Update, context: ContextTypes.DEFAULT_TYPE, univ_code = None):
     """Menerbitkan KTM resmi langsung dari tombol Reply Keyboard"""
     user = update.effective_user
     u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
