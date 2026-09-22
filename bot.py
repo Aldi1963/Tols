@@ -1975,6 +1975,39 @@ async def handle_generate_ktm_action(update: Update, context: ContextTypes.DEFAU
         logger.error(f"Error generating KTM from reply button: {e}", exc_info=True)
         await status_msg.edit_text(f"❌ Terjadi kesalahan: {html.escape(str(e))}", parse_mode="HTML")
 
+
+async def handle_buy_pkg_action(update: Update, context: ContextTypes.DEFAULT_TYPE, pkg_type: str):
+    """Membuat tagihan pembayaran QRIS Clipku Pay langsung dari Reply Keyboard"""
+    user = update.effective_user
+    status_msg = await update.message.reply_text("⏳ <i>Menghubungi gateway Clipku Pay untuk membuat tagihan QRIS...</i>", parse_mode="HTML")
+    
+    res = create_clipku_payment(user.id, pkg_type, user.first_name or "User")
+    if res.get("success"):
+        order_id = res["order_id"]
+        amount = res["amount"]
+        pay_url = res["payment_url"]
+        pkg_name = "+10 Kuota Cetak (Permanen)" if pkg_type == "quota_10" else "👑 VIP Unlimited 30 Hari"
+
+        text = (
+            "🧾 <b>TAGIHAN PEMBAYARAN QRIS RESMI</b>\n\n"
+            f"• Paket: <b>{pkg_name}</b>\n"
+            f"• Order ID: <code>{order_id}</code>\n"
+            f"• Total Bayar: <b>Rp {amount:,}</b>\n"
+            "• Metode: QRIS Real-time (BCA, DANA, GoPay, OVO, ShopeePay, Mandiri)\n\n"
+            "Ketuk tombol <b>📲 Bayar Sekarang (QRIS)</b> di bawah untuk melakukan pembayaran, "
+            "lalu tekan <b>🔄 Cek Status Pembayaran</b> setelah transfer selesai."
+        )
+        pay_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📲 Bayar Sekarang (Buka QRIS)", url=pay_url)],
+            [InlineKeyboardButton("🔄 Cek Status Pembayaran", callback_data=f"chk_pay:{order_id}")],
+            [InlineKeyboardButton("« Tutup", callback_data="main_menu")],
+        ])
+        await update.message.reply_text(text, reply_markup=pay_kb, parse_mode="HTML")
+        await status_msg.delete()
+    else:
+        err_msg = res.get("error", "Terjadi kesalahan sistem")
+        await status_msg.edit_text(f"❌ Gagal membuat pembayaran: {html.escape(err_msg)}", parse_mode="HTML")
+
 async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Router Hub 2x2: Bersih, Cepat, dan Sangat Lega di Layar HP"""
     text = update.message.text.strip()
@@ -2110,6 +2143,15 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             "Pilih paket pada tombol di bawah untuk mendapatkan link bayar QRIS:"
         )
         await update.message.reply_text(msg, reply_markup=get_profile_hub_reply_keyboard(), parse_mode="HTML")
+        return
+
+    # Handler Tombol Pembelian Paket Kuota / VIP dari Reply Keyboard
+    elif text in ["⚡ Beli +10 Kuota (Rp 5.000)", "⚡ Beli +10 Kuota", "Beli Kuota"]:
+        await handle_buy_pkg_action(update, context, "quota_10")
+        return
+
+    elif text in ["👑 Beli VIP 30 Hari (Rp 15.000)", "👑 Beli VIP 30 Hari", "Beli VIP"]:
+        await handle_buy_pkg_action(update, context, "vip_30d")
         return
 
     elif text == "🎁 Ambil Tautan Referral":
