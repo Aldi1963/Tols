@@ -241,7 +241,8 @@ def get_tools_hub_reply_keyboard():
     return ReplyKeyboardMarkup(
         [
             [KeyboardButton("🎬 DOWNLOAD VIDEO (NO WM)"), KeyboardButton("✂️ Auto Clip Video (9:16)")],
-            [KeyboardButton("✂️ Hapus BG & Pasfoto AI"), KeyboardButton("📄 Word ke PDF")],
+            [KeyboardButton("💱 KURS VALAS LIVE"), KeyboardButton("✂️ Hapus BG & Pasfoto AI")],
+            [KeyboardButton("📄 Word ke PDF"), KeyboardButton("📝 PDF ke Word")],
             [KeyboardButton("📝 PDF ke Word"), KeyboardButton("🖼️ Foto ke PDF")],
             [KeyboardButton("🖼️ Foto ke PDF"), KeyboardButton("📸 PDF ke Gambar HD")],
             [KeyboardButton("📑 Gabung PDF (Merge)"), KeyboardButton("🔓 Buka Password PDF")],
@@ -2015,6 +2016,35 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
 
     
+    # Smart Auto-Detect Kurs Mata Uang (contoh: '$150', '50 sgd to idr', '2000 myr')
+    import currency_service
+    curr_parsed = currency_service.parse_currency_query(text)
+    if curr_parsed:
+        amt, f_curr, t_curr = curr_parsed
+        res = currency_service.convert_currency(amt, f_curr, t_curr)
+        if res:
+            res_val = res['result']
+            single_val = res['rate_single']
+            if t_curr == "IDR":
+                res_formatted = f"Rp {res_val:,.2f}"
+                single_formatted = f"Rp {single_val:,.2f}"
+            else:
+                res_formatted = f"{res_val:,.2f} {t_curr}"
+                single_formatted = f"{single_val:,.4f} {t_curr}"
+
+            f_name = currency_service.CURRENCY_FLAGS.get(f_curr, f_curr)
+            t_name = currency_service.CURRENCY_FLAGS.get(t_curr, t_curr)
+            msg = (
+                f"💱 <b>HASIL KONVERSI KURS VALAS REAL-TIME</b>\n\n"
+                f"• Nominal: <b>{amt:,.2f} {f_curr}</b> ({f_name})\n"
+                f"• Hasil Tukar: <b>{res_formatted}</b> ({t_name})\n\n"
+                f"📊 <b>Nilai Tukar Saat Ini:</b>\n"
+                f"1 {f_curr} = <b>{single_formatted}</b>\n"
+                f"<i>Data pasar valuta asing global live per jam.</i>"
+            )
+            await update.message.reply_text(msg, parse_mode="HTML")
+            return
+
     # Smart Auto-Detect Video Links (TikTok, IG, FB, YT, X) langsung dari chat
     if is_supported_url(text):
         url = extract_url_from_text(text)
@@ -2084,6 +2114,13 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             parse_mode="HTML"
         )
         context.user_data["awaiting_custom_name"] = True
+        return
+
+    # Handler Papan Kurs Valuta Asing Real-Time
+    elif text in ["💱 KURS VALAS LIVE", "💱 Kurs Valas Live", "💱 KURS VALAS", "/kurs", "/forex"]:
+        import currency_service
+        rates_board = currency_service.get_popular_rates_text()
+        await update.message.reply_text(rates_board, parse_mode="HTML")
         return
 
     # Handler Transkrip Nilai (KHS)
@@ -3621,6 +3658,7 @@ def main():
     app.add_handler(CommandHandler("bantuan", bantuan_command))
     app.add_handler(CommandHandler("dl", dl_video_start))
     app.add_handler(CommandHandler("khs", khs_menu_handler))
+    app.add_handler(CommandHandler("kurs", lambda u, c: u.message.reply_text(currency_service.get_popular_rates_text(), parse_mode="HTML")))
     app.add_handler(CommandHandler("autoclip", dl_video_start))
 
     # Admin commands
