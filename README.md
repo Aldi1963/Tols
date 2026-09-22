@@ -60,14 +60,19 @@ Menerbitkan paket lengkap berkas pendidik (Kartu Identitas, SK Pengangkatan, Sli
 * 🇬🇧 Inggris (Teacher Registration, School Letter)
 * 🇦🇺 Australia | 🇨🇦 Kanada | 🇫🇷 Prancis | 🇪🇸 Spanyol | 🇦🇷 Argentina | 🇲🇽 Meksiko | 🇵🇭 Filipina | 🇹🇭 Thailand | 🇸🇰 Slowakia.
 
-### 4. Kelola Dokumen PDF & Word
+### 4. Kelola Dokumen PDF & Word (PDF24 Complete Suite)
 * **Word ke PDF**: Mengonversi berkas `.docx`, `.doc`, `.rtf`, `.txt` menjadi PDF resmi via LibreOffice headless.
 * **PDF ke Word**: Mengonversi dokumen PDF menjadi berkas Microsoft Word editable (`.docx`) mempertahankan tata letak teks dan tabel.
 * **Foto ke PDF (Single / Multi)**: Menggabungkan banyak foto (JPG, PNG, WEBP, Apple HEIC) menjadi satu dokumen PDF rapi.
 * **PDF ke Gambar HD**: Merender setiap halaman berkas PDF menjadi foto JPEG tajam 200 DPI.
 * **Gabung Banyak PDF (Merge)**: Menyatukan berkas-berkas PDF terpisah menjadi 1 file utuh berurutan.
 * **Pecah & Ambil Halaman PDF (Splitter)**: Memotong dan mengekstrak halaman tertentu (misal halaman `1-3, 5`) dari PDF tebal tanpa merusak format.
-* **Buka Password PDF (Unlock)**: Menghapus proteksi sandi/enkripsi pada e-Statement rekening koran bank atau slip gaji.
+* **Putar Halaman PDF (Rotate PDF)**: Memutar seluruh lembar PDF yang miring/terbalik sebesar 90 derajat searah jarum jam secara instan.
+* **Hapus Halaman PDF (Remove Pages)**: Membuang halaman kosong, rusak, atau tidak terpakai (contoh input: `2` atau `1, 3, 5`).
+* **Beri Nomor Halaman (Add Page Numbers)**: Menyematkan nomor urut resmi (*'Halaman 1 dari N'*) di bagian bawah lembar PDF standar skripsi/laporan dinas.
+* **Kunci Password PDF (Protect PDF)**: Mengunci berkas rahasia dengan enkripsi kata sandi kuat AES-128.
+* **Buka Password PDF (Unlock PDF)**: Menghapus proteksi sandi/enkripsi pada e-Statement rekening koran bank atau slip gaji.
+* **Ekstrak Gambar dari PDF**: Mengambil dan mengunduh seluruh foto/gambar asli resolusi penuh yang tertanam di dalam dokumen PDF.
 * **Kompres Dokumen PDF**: Memperkecil ukuran berkas PDF menjadi <500KB atau <1MB menggunakan Ghostscript Optimizer.
 
 ### 5. Video Downloader & Auto Clip 9:16
@@ -139,6 +144,7 @@ Menerbitkan paket lengkap berkas pendidik (Kartu Identitas, SK Pengangkatan, Sli
 ├── currency_service.py          # Engine Kurs Valuta Asing Real-Time & Query Detector
 ├── watermark_tool.py            # Engine Stempel Watermark KTP Anti-Pinjol
 ├── pdf_splitter_tool.py         # Engine Pemecah & Pengambil Halaman Dokumen PDF
+├── pdf24_suite.py               # Complete PDF24 Tools Engine (Rotate, Delete, Numbering, Protect, Extract)
 ├── kwitansi_tool.py             # Engine Pembuat Kwitansi Pembayaran Resmi PDF A5
 ├── vcf_saver_tool.py            # Engine Pembuat Berkas Kontak HP Bulk (.vcf)
 ├── doc_scanner_tool.py          # Filter Magic Color Dokumen Kertas (CamScanner)
@@ -213,6 +219,11 @@ Menerbitkan paket lengkap berkas pendidik (Kartu Identitas, SK Pengangkatan, Sli
 | `/autoclip` | Memotong video menjadi vertikal rasio 9:16 (TikTok / Shorts) |
 | `/watermark`| Menempelkan stempel watermark pengaman KTP anti-pinjol |
 | `/splitpdf` | Memecah dan mengambil nomor halaman tertentu dari berkas PDF |
+| `/rotatepdf` | Memutar seluruh halaman dokumen PDF sebesar 90 derajat |
+| `/removepages` | Menghapus lembaran halaman tertentu dari dokumen PDF |
+| `/numberpdf` | Menyematkan nomor urut halaman resmi di bawah lembar PDF |
+| `/protectpdf` | Mengunci dokumen PDF dengan proteksi kata sandi AES-128 |
+| `/extractimages` | Mengambil seluruh foto/gambar asli yang tertanam di dalam PDF |
 | `/kwitansi` | Menerbitkan PDF Kwitansi Pembayaran Resmi A5 terbilang otomatis |
 | `/vcf` | Mengonversi daftar nomor HP menjadi berkas kontak telepon `.vcf` |
 | `/scan` | Membersihkan foto dokumen/kertas kamera HP (CamScanner Filter) |
