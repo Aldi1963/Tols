@@ -96,6 +96,12 @@ OCR_WAIT_PHOTO = 60
 PDF2IMG_WAIT = 65
 PASFOTO4R_WAIT = 70
 DL_VIDEO_WAIT = 80
+# Conversation states untuk 4 tools baru
+WM_KTP_PHOTO, WM_KTP_TEXT = 100, 101
+SPLIT_PDF_FILE, SPLIT_PDF_PAGES = 102, 103
+KWITANSI_INPUT = 104
+VCF_CONTACTS_INPUT = 105
+
 COMPRESS_WAIT_PHOTO, COMPRESS_WAIT_SIZE = range(20, 22)
 DOC2PDF_WAIT_FILE = 30
 PDF2DOC_WAIT_FILE = 35
@@ -109,6 +115,12 @@ OCR_WAIT_PHOTO = 60
 PDF2IMG_WAIT = 65
 PASFOTO4R_WAIT = 70
 DL_VIDEO_WAIT = 80
+# Conversation states untuk 4 tools baru
+WM_KTP_PHOTO, WM_KTP_TEXT = 100, 101
+SPLIT_PDF_FILE, SPLIT_PDF_PAGES = 102, 103
+KWITANSI_INPUT = 104
+VCF_CONTACTS_INPUT = 105
+
 
 # Storage cache in memory for active sessions (chat_id -> dict)
 SESSION_DOC_CACHE = {}
@@ -254,8 +266,9 @@ def get_tools_pdf_reply_keyboard():
         [
             [KeyboardButton("📄 Word ke PDF"), KeyboardButton("📝 PDF ke Word")],
             [KeyboardButton("🖼️ Foto ke PDF"), KeyboardButton("📸 PDF ke Gambar HD")],
-            [KeyboardButton("📑 Gabung PDF (Merge)"), KeyboardButton("🔓 Buka Password PDF")],
-            [KeyboardButton("🗜️ Kompres Dokumen PDF"), KeyboardButton("« KEMBALI KE KOTAK ALAT")],
+            [KeyboardButton("📑 Gabung PDF (Merge)"), KeyboardButton("✂️ Pecah / Split PDF")],
+            [KeyboardButton("🔓 Buka Password PDF"), KeyboardButton("🗜️ Kompres Dokumen PDF")],
+            [KeyboardButton("« KEMBALI KE KOTAK ALAT")],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -276,9 +289,10 @@ def get_tools_photo_reply_keyboard():
     """Kategori 3: Peralatan Foto, Gambar, Pasfoto & Scan"""
     return ReplyKeyboardMarkup(
         [
-            [KeyboardButton("✂️ Hapus BG & Pasfoto AI"), KeyboardButton("🗜️ Kompres Foto (CPNS)")],
-            [KeyboardButton("🖨️ Pasfoto 4R Siap Cetak"), KeyboardButton("🔍 Scan Foto ke Teks (OCR)")],
-            [KeyboardButton("🖋️ Tanda Tangan Transparan"), KeyboardButton("« KEMBALI KE KOTAK ALAT")],
+            [KeyboardButton("🛡️ Watermark KTP Aman"), KeyboardButton("✂️ Hapus BG & Pasfoto AI")],
+            [KeyboardButton("🗜️ Kompres Foto (CPNS)"), KeyboardButton("🖨️ Pasfoto 4R Siap Cetak")],
+            [KeyboardButton("🔍 Scan Foto ke Teks (OCR)"), KeyboardButton("🖋️ Tanda Tangan Transparan")],
+            [KeyboardButton("« KEMBALI KE KOTAK ALAT")],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -288,6 +302,7 @@ def get_tools_prod_reply_keyboard():
     """Kategori 4: Kurs Mata Uang & Utilitas"""
     return ReplyKeyboardMarkup(
         [
+            [KeyboardButton("🧾 Buat Kwitansi PDF"), KeyboardButton("📇 Simpan Kontak (VCF)")],
             [KeyboardButton("💱 KURS VALAS LIVE"), KeyboardButton("📊 Transkrip Nilai (KHS)")],
             [KeyboardButton("« KEMBALI KE KOTAK ALAT")],
         ],
@@ -3530,6 +3545,286 @@ async def khs_generate_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.error(f"Error generating KHS: {e}", exc_info=True)
         await status_msg.edit_text(f"❌ <b>Gagal menerbitkan KHS:</b> {e}", parse_mode="HTML")
 
+
+# ==================== IMPLEMENTASI 4 ALAT PRODUKTIVITAS BARU ====================
+
+# 1. WATERMARK KTP AMAN (ANTI-PINJOL)
+async def wm_ktp_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "🛡️ <b>STEMPEL WATERMARK KTP AMAN (ANTI-PINJOL)</b>\n\n"
+        "Lindungi foto KTP, KK, SIM, atau dokumen penting Anda agar tidak disalahgunakan pihak ketiga.\n\n"
+        "📷 <b>Kirimkan foto KTP / dokumen Anda sekarang:</b>"
+    )
+    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« KEMBALI KE KOTAK ALAT")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
+    return WM_KTP_PHOTO
+
+async def wm_ktp_photo_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (update.message.text or "").strip()
+    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
+        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
+        return ConversationHandler.END
+
+    if not update.message.photo and not update.message.document:
+        await update.message.reply_text("⚠️ Harap kirimkan berkas gambar/foto dokumen Anda.")
+        return WM_KTP_PHOTO
+
+    file_id = update.message.photo[-1].file_id if update.message.photo else update.message.document.file_id
+    tg_file = await context.bot.get_file(file_id)
+    bio = io.BytesIO()
+    await tg_file.download_to_memory(bio)
+    context.user_data["wm_image_bytes"] = bio.getvalue()
+
+    msg = (
+        "✍️ <b>Tuliskan Tujuan Penggunaan Dokumen Ini:</b>\n\n"
+        "<i>Contoh tulisan pengaman:</i>\n"
+        "• <code>VERIFIKASI REKENING BANK - 22/09/2026</code>\n"
+        "• <code>PENDAFTARAN KERJA PT MAJU JAYA</code>\n"
+        "• <code>SEWA MOTOR JOGJA HANYA 3 HARI</code>\n\n"
+        "Ketik teks watermark Anda sekarang:"
+    )
+    await update.message.reply_text(msg, parse_mode="HTML")
+    return WM_KTP_TEXT
+
+async def wm_ktp_text_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (update.message.text or "").strip()
+    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
+        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
+        return ConversationHandler.END
+
+    raw_bytes = context.user_data.get("wm_image_bytes")
+    if not raw_bytes:
+        await update.message.reply_text("⚠️ Sesi kedaluwarsa. Silakan ulangi.")
+        return ConversationHandler.END
+
+    status_msg = await update.message.reply_text("⏳ <i>Menyematkan stempel watermark anti-penyalahgunaan...</i>", parse_mode="HTML")
+    try:
+        import watermark_tool
+        res_bytes = watermark_tool.apply_watermark_ktm(raw_bytes, text)
+        bio = io.BytesIO(res_bytes)
+        bio.name = f"KTP_TERPROTEKSI_{datetime.now().strftime('%H%M%S')}.jpg"
+        bio.seek(0)
+
+        caption = (
+            f"🛡️ <b>Dokumen Berhasil Diberi Watermark Pengaman!</b>\n\n"
+            f"• Label Stempel: <b>{html.escape(text.upper())}</b>\n"
+            "✓ Teks miring menyatu rapat dengan latar belakang dokumen\n"
+            "✓ Aman dari risiko penyalahgunaan pinjaman online & penipuan"
+        )
+        await context.bot.send_photo(chat_id=update.effective_chat.id, photo=bio, caption=caption, parse_mode="HTML")
+        await status_msg.delete()
+        await update.message.reply_text("Selesai! Silakan pilih alat lain di bawah:", reply_markup=get_tools_photo_reply_keyboard())
+    except Exception as e:
+        logger.error(f"Error watermark: {e}", exc_info=True)
+        await status_msg.edit_text(f"❌ Gagal memproses watermark: {e}")
+
+    return ConversationHandler.END
+
+
+# 2. PECAH / SPLIT PDF
+async def split_pdf_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "✂️ <b>PECAH & AMBIL HALAMAN PDF (PDF SPLITTER)</b>\n\n"
+        "Ambil halaman tertentu dari berkas PDF tebal Anda tanpa merusak kualitas teks/tabel.\n\n"
+        "📎 <b>Kirimkan berkas PDF Anda sekarang:</b>"
+    )
+    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« KEMBALI KE KOTAK ALAT")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
+    return SPLIT_PDF_FILE
+
+async def split_pdf_file_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (update.message.text or "").strip()
+    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
+        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
+        return ConversationHandler.END
+
+    if not update.message.document or not (update.message.document.file_name or "").lower().endswith(".pdf"):
+        await update.message.reply_text("⚠️ Harap kirimkan berkas dokumen format PDF.")
+        return SPLIT_PDF_FILE
+
+    tg_file = await context.bot.get_file(update.message.document.file_id)
+    bio = io.BytesIO()
+    await tg_file.download_to_memory(bio)
+    context.user_data["split_pdf_bytes"] = bio.getvalue()
+    context.user_data["split_pdf_name"] = update.message.document.file_name or "dokumen.pdf"
+
+    from pypdf import PdfReader
+    try:
+        reader = PdfReader(io.BytesIO(context.user_data["split_pdf_bytes"]))
+        total_p = len(reader.pages)
+    except Exception:
+        total_p = "?"
+
+    msg = (
+        f"📄 <b>Dokumen Terdeteksi ({total_p} Halaman)!</b>\n\n"
+        "Tuliskan nomor halaman yang ingin Anda ambil / potong:\n"
+        "• Contoh rentang: <code>1-3</code> (mengambil halaman 1 sampai 3)\n"
+        "• Contoh acak: <code>1, 4, 7</code>\n"
+        "• Contoh gabungan: <code>1-2, 5</code>\n\n"
+        "Ketikkan nomor halaman sekarang:"
+    )
+    await update.message.reply_text(msg, parse_mode="HTML")
+    return SPLIT_PDF_PAGES
+
+async def split_pdf_pages_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (update.message.text or "").strip()
+    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
+        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
+        return ConversationHandler.END
+
+    raw_pdf = context.user_data.get("split_pdf_bytes")
+    if not raw_pdf:
+        await update.message.reply_text("⚠️ Berkas sesi telah kedaluwarsa. Silakan kirim ulang.")
+        return ConversationHandler.END
+
+    status_msg = await update.message.reply_text("⏳ <i>Memotong dan mengekstrak halaman PDF pilihan Anda...</i>", parse_mode="HTML")
+    try:
+        import pdf_splitter_tool
+        ok, res_data, count = pdf_splitter_tool.split_pdf_pages(raw_pdf, text)
+        if ok:
+            bio = io.BytesIO(res_data)
+            orig_name = context.user_data.get("split_pdf_name", "doc.pdf")
+            clean_name = os.path.splitext(orig_name)[0]
+            bio.name = f"{clean_name}_Hal_{text.replace(' ', '_')}.pdf"
+            bio.seek(0)
+
+            caption = (
+                f"✅ <b>PDF Berhasil Dipotong!</b>\n\n"
+                f"• Halaman Diekstrak: <b>{text}</b> ({count} halaman)\n"
+                f"• Ukuran: <b>{len(res_data)/1024:.1f} KB</b>"
+            )
+            await context.bot.send_document(chat_id=update.effective_chat.id, document=bio, caption=caption, parse_mode="HTML")
+            await status_msg.delete()
+            await update.message.reply_text("Pemotongan selesai! Silakan pilih alat lain di bawah:", reply_markup=get_tools_pdf_reply_keyboard())
+        else:
+            await status_msg.edit_text(f"❌ {res_data}")
+            return SPLIT_PDF_PAGES
+
+    except Exception as e:
+        logger.error(f"Error split pdf: {e}", exc_info=True)
+        await status_msg.edit_text(f"❌ Gagal memecah PDF: {e}")
+
+    return ConversationHandler.END
+
+
+# 3. GENERATOR KWITANSI PEMBAYARAN RESMI PDF
+async def kwitansi_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "🧾 <b>GENERATOR KWITANSI PEMBAYARAN RESMI (PDF A5)</b>\n\n"
+        "Terbitkan bukti tanda terima pembayaran resmi seketika lengkap dengan terbilang rupiah otomatis, stempel Lunas, dan tanda tangan kasir.\n\n"
+        "Format pengisian sangat mudah (pisahkan dengan garis tegak <b>|</b>):\n"
+        "<code>Nama Pembayar | Nominal Angka | Untuk Keperluan</code>\n\n"
+        "<i>Contoh ketik:</i>\n"
+        "<code>Budi Santoso | 2500000 | Pembayaran Jasa Pembuatan Website</code>\n\n"
+        "Silakan ketik data transaksi Anda sekarang:"
+    )
+    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« KEMBALI KE KOTAK ALAT")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
+    return KWITANSI_INPUT
+
+async def kwitansi_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (update.message.text or "").strip()
+    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
+        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
+        return ConversationHandler.END
+
+    parts = [p.strip() for p in text.split("|")]
+    if len(parts) < 3:
+        await update.message.reply_text(
+            "⚠️ Format belum pas. Mohon pisahkan dengan tanda <b>|</b>, contoh:\n"
+            "<code>Budi Santoso | 2500000 | Pembayaran Jasa Servis AC</code>",
+            parse_mode="HTML"
+        )
+        return KWITANSI_INPUT
+
+    pembayar = parts[0]
+    nom_str = re.sub(r"[^\d]", "", parts[1])
+    keperluan = parts[2]
+
+    try:
+        nominal = int(nom_str)
+        if nominal <= 0:
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text("⚠️ Nominal angka tidak valid. Contoh nominal: <code>2500000</code>")
+        return KWITANSI_INPUT
+
+    status_msg = await update.message.reply_text("⏳ <i>Menyusun naskah & merender Kwitansi Pembayaran PDF 300 DPI...</i>", parse_mode="HTML")
+    try:
+        import kwitansi_tool
+        penerima = update.effective_user.first_name or "Kasir"
+        pdf_bytes = kwitansi_tool.generate_kwitansi_pdf(pembayar=pembayar, nominal=nominal, keperluan=keperluan, penerima=penerima)
+
+        bio = io.BytesIO(pdf_bytes)
+        bio.name = f"Kwitansi_{pembayar.replace(' ', '_')}_{nominal}.pdf"
+        bio.seek(0)
+
+        caption = (
+            f"🧾 <b>Kwitansi Pembayaran Resmi Berhasil Diterbitkan!</b>\n\n"
+            f"• Pembayar: <b>{html.escape(pembayar.upper())}</b>\n"
+            f"• Total Bayar: <b>Rp {nominal:,},-</b>\n"
+            f"• Untuk: <b>{html.escape(keperluan)}</b>\n"
+            "✓ Terbilang Rupiah Otomatis\n"
+            "✓ Stempel Lunas & Tanda Tangan Kasir Resmi\n"
+            "✓ Format Cetak Dokumen PDF A5 300 DPI"
+        )
+        await context.bot.send_document(chat_id=update.effective_chat.id, document=bio, caption=caption, parse_mode="HTML")
+        await status_msg.delete()
+        await update.message.reply_text("Kwitansi siap digunakan! Pilih alat lain di bawah:", reply_markup=get_tools_prod_reply_keyboard())
+    except Exception as e:
+        logger.error(f"Error kwitansi: {e}", exc_info=True)
+        await status_msg.edit_text(f"❌ Gagal membuat kwitansi: {e}")
+
+    return ConversationHandler.END
+
+
+# 4. PEMBUAT FILE KONTAK HP OTOMATIS (VCARD / VCF)
+async def vcf_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "📇 <b>PEMBUAT FILE KONTAK HP OTOMATIS (VCF BULK SAVER)</b>\n\n"
+        "Simpan puluhan / ratusan nomor WhatsApp sekaligus ke buku telepon HP hanya dengan sekali ketuk!\n\n"
+        "Kirimkan atau tempelkan daftar nomor HP Anda sekarang.\n"
+        "<i>Bisa format bebas:</i>\n"
+        "• <code>Budi: 08123456789</code>\n"
+        "• <code>085712345678 Siti Rahma</code>\n"
+        "• <code>081987654321</code>\n\n"
+        "Silakan kirimkan daftar nomor Anda sekarang:"
+    )
+    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« KEMBALI KE KOTAK ALAT")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
+    return VCF_CONTACTS_INPUT
+
+async def vcf_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (update.message.text or "").strip()
+    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
+        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
+        return ConversationHandler.END
+
+    import vcf_saver_tool
+    contacts = vcf_saver_tool.parse_contacts_text(text)
+    if not contacts:
+        await update.message.reply_text("⚠️ Tidak ditemukan nomor HP yang valid. Pastikan ada nomor berawalan 08 atau 62.")
+        return VCF_CONTACTS_INPUT
+
+    status_msg = await update.message.reply_text(f"⏳ <i>Mengonversi {len(contacts)} nomor ke format vCard 3.0...</i>", parse_mode="HTML")
+    try:
+        vcf_bytes = vcf_saver_tool.generate_vcf_file(contacts)
+        bio = io.BytesIO(vcf_bytes)
+        bio.name = f"Kontak_Baru_{len(contacts)}_Nomor.vcf"
+        bio.seek(0)
+
+        caption = (
+            f"📇 <b>Berkas Kontak ({len(contacts)} Nomor) Berhasil Dibuat!</b>\n\n"
+            "💡 <b>Cara Menyimpan ke HP:</b>\n"
+            "1. Ketuk berkas <b>.vcf</b> di atas.\n"
+            "2. Pilih <i>Simpan ke Kontak (Google / iPhone)</i>.\n"
+            "3. Semua nomor otomatis langsung tersimpan di kontak WhatsApp Anda!"
+        )
+        await context.bot.send_document(chat_id=update.effective_chat.id, document=bio, caption=caption, parse_mode="HTML")
+        await status_msg.delete()
+        await update.message.reply_text("Kontak selesai dibuat! Pilih alat lain di bawah:", reply_markup=get_tools_prod_reply_keyboard())
+    except Exception as e:
+        logger.error(f"Error vcf: {e}", exc_info=True)
+        await status_msg.edit_text(f"❌ Gagal membuat file kontak: {e}")
+
+    return ConversationHandler.END
+
 def main():
     print("Starting Comprehensive Yowes Bot...")
     req_settings = HTTPXRequest(
@@ -3736,6 +4031,57 @@ def main():
     app.add_handler(CommandHandler("dl", dl_video_start))
     app.add_handler(CommandHandler("khs", khs_menu_handler))
     app.add_handler(CommandHandler("kurs", lambda u, c: u.message.reply_text(currency_service.get_popular_rates_text(), parse_mode="HTML")))
+    # Conversation Handlers untuk 4 alat baru
+    wm_conv = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^(🛡️ Watermark KTP Aman|🛡️ WATERMARK KTP AMAN)$"), wm_ktp_start),
+            CommandHandler("watermark", wm_ktp_start),
+        ],
+        states={
+            WM_KTP_PHOTO: [MessageHandler(filters.PHOTO | filters.Document.ALL | filters.TEXT, wm_ktp_photo_received)],
+            WM_KTP_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, wm_ktp_text_received)],
+        },
+        fallbacks=[CommandHandler("cancel", start_command)],
+    )
+    app.add_handler(wm_conv)
+
+    split_conv = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^(✂️ Pecah / Split PDF|✂️ PECAH / SPLIT PDF|✂️ Split PDF)$"), split_pdf_start),
+            CommandHandler("splitpdf", split_pdf_start),
+        ],
+        states={
+            SPLIT_PDF_FILE: [MessageHandler(filters.Document.ALL | filters.TEXT, split_pdf_file_received)],
+            SPLIT_PDF_PAGES: [MessageHandler(filters.TEXT & ~filters.COMMAND, split_pdf_pages_received)],
+        },
+        fallbacks=[CommandHandler("cancel", start_command)],
+    )
+    app.add_handler(split_conv)
+
+    kwitansi_conv = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^(🧾 Buat Kwitansi PDF|🧾 BUAT KWITANSI PDF|🧾 Kwitansi PDF)$"), kwitansi_start),
+            CommandHandler("kwitansi", kwitansi_start),
+        ],
+        states={
+            KWITANSI_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, kwitansi_received)],
+        },
+        fallbacks=[CommandHandler("cancel", start_command)],
+    )
+    app.add_handler(kwitansi_conv)
+
+    vcf_conv = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^(📇 Simpan Kontak \(VCF\)|📇 SIMPAN KONTAK \(VCF\)|📇 Simpan Kontak)$"), vcf_start),
+            CommandHandler("vcf", vcf_start),
+        ],
+        states={
+            VCF_CONTACTS_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, vcf_received)],
+        },
+        fallbacks=[CommandHandler("cancel", start_command)],
+    )
+    app.add_handler(vcf_conv)
+
     app.add_handler(CommandHandler("autoclip", dl_video_start))
 
     # Admin commands
