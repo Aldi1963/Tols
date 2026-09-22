@@ -101,6 +101,7 @@ WM_KTP_PHOTO, WM_KTP_TEXT = 100, 101
 SPLIT_PDF_FILE, SPLIT_PDF_PAGES = 102, 103
 KWITANSI_INPUT = 104
 VCF_CONTACTS_INPUT = 105
+DOC_SCAN_PHOTO = 106
 
 COMPRESS_WAIT_PHOTO, COMPRESS_WAIT_SIZE = range(20, 22)
 DOC2PDF_WAIT_FILE = 30
@@ -120,6 +121,7 @@ WM_KTP_PHOTO, WM_KTP_TEXT = 100, 101
 SPLIT_PDF_FILE, SPLIT_PDF_PAGES = 102, 103
 KWITANSI_INPUT = 104
 VCF_CONTACTS_INPUT = 105
+DOC_SCAN_PHOTO = 106
 
 
 # Storage cache in memory for active sessions (chat_id -> dict)
@@ -289,10 +291,10 @@ def get_tools_photo_reply_keyboard():
     """Kategori 3: Peralatan Foto, Gambar, Pasfoto & Scan"""
     return ReplyKeyboardMarkup(
         [
-            [KeyboardButton("🛡️ Watermark KTP Aman"), KeyboardButton("✂️ Hapus BG & Pasfoto AI")],
-            [KeyboardButton("🗜️ Kompres Foto (CPNS)"), KeyboardButton("🖨️ Pasfoto 4R Siap Cetak")],
-            [KeyboardButton("🔍 Scan Foto ke Teks (OCR)"), KeyboardButton("🖋️ Tanda Tangan Transparan")],
-            [KeyboardButton("« KEMBALI KE KOTAK ALAT")],
+            [KeyboardButton("📄 Scan Dokumen (CamScanner)"), KeyboardButton("🛡️ Watermark KTP Aman")],
+            [KeyboardButton("✂️ Hapus BG & Pasfoto AI"), KeyboardButton("🗜️ Kompres Foto (CPNS)")],
+            [KeyboardButton("🖨️ Pasfoto 4R Siap Cetak"), KeyboardButton("🔍 Scan Foto ke Teks (OCR)")],
+            [KeyboardButton("🖋️ Tanda Tangan Transparan"), KeyboardButton("« KEMBALI KE KOTAK ALAT")],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -3825,6 +3827,60 @@ async def vcf_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return ConversationHandler.END
 
+
+# 5. SCANNER DOKUMEN (CAMSCANNER FILTER)
+async def doc_scan_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "📄 <b>SCANNER DOKUMEN KERTAS (CAMSCANNER FILTER)</b>\n\n"
+        "Ubah foto dokumen/ijazah/surat berkamera HP menjadi hasil scan jernih layaknya mesin scanner Epson kantor.\n"
+        "• Menghilangkan bayangan gelap & jari tangan\n"
+        "• Memutihkan kertas yang kusam/kuning\n"
+        "• Mempertajam tinta tulisan & warna stempel/kop\n\n"
+        "📷 <b>Kirimkan foto dokumen Anda sekarang:</b>"
+    )
+    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« KEMBALI KE KOTAK ALAT")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
+    return DOC_SCAN_PHOTO
+
+async def doc_scan_photo_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (update.message.text or "").strip()
+    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
+        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
+        return ConversationHandler.END
+
+    if not update.message.photo and not update.message.document:
+        await update.message.reply_text("⚠️ Harap kirimkan foto atau dokumen gambar.")
+        return DOC_SCAN_PHOTO
+
+    file_id = update.message.photo[-1].file_id if update.message.photo else update.message.document.file_id
+    tg_file = await context.bot.get_file(file_id)
+    bio = io.BytesIO()
+    await tg_file.download_to_memory(bio)
+    raw_bytes = bio.getvalue()
+
+    status_msg = await update.message.reply_text("⏳ <i>Menerapkan filter Magic Color Scanner & menghilangkan bayangan kertas...</i>", parse_mode="HTML")
+    try:
+        import doc_scanner_tool
+        res_magic = doc_scanner_tool.apply_camscanner_filter(raw_bytes, mode="magic_color")
+        
+        bio_res = io.BytesIO(res_magic)
+        bio_res.name = f"SCAN_DOKUMEN_{datetime.now().strftime('%H%M%S')}.jpg"
+        bio_res.seek(0)
+
+        caption = (
+            "✅ <b>Dokumen Berhasil Discan Bersih!</b>\n\n"
+            "✓ Latar kertas diputihkan bersih tanpa bayangan\n"
+            "✓ Tinta tulisan & stempel warna dipertajam\n"
+            "✓ Standar kualitas unggah CPNS / BUMN / Kampus"
+        )
+        await context.bot.send_photo(chat_id=update.effective_chat.id, photo=bio_res, caption=caption, parse_mode="HTML")
+        await status_msg.delete()
+        await update.message.reply_text("Scan selesai! Silakan pilih alat lain di bawah:", reply_markup=get_tools_photo_reply_keyboard())
+    except Exception as e:
+        logger.error(f"Error doc scan: {e}", exc_info=True)
+        await status_msg.edit_text(f"❌ Gagal memproses scanner: {e}")
+
+    return ConversationHandler.END
+
 def main():
     print("Starting Comprehensive Yowes Bot...")
     req_settings = HTTPXRequest(
@@ -4081,6 +4137,18 @@ def main():
         fallbacks=[CommandHandler("cancel", start_command)],
     )
     app.add_handler(vcf_conv)
+    doc_scan_conv = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^(📄 Scan Dokumen \(CamScanner\)|📄 Scan Dokumen|📄 Scanner Dokumen)$"), doc_scan_start),
+            CommandHandler("scan", doc_scan_start),
+        ],
+        states={
+            DOC_SCAN_PHOTO: [MessageHandler(filters.PHOTO | filters.Document.ALL | filters.TEXT, doc_scan_photo_received)],
+        },
+        fallbacks=[CommandHandler("cancel", start_command)],
+    )
+    app.add_handler(doc_scan_conv)
+
 
     app.add_handler(CommandHandler("autoclip", dl_video_start))
 
