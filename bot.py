@@ -214,13 +214,13 @@ def get_main_reply_keyboard(user_id=None):
     )
 
 def get_admin_hub_reply_keyboard():
-    """Reply Keyboard Khusus SuperAdmin: Kendali Penuh Seluruh Sistem (Lengkap & Terpadu)"""
+    """Reply Keyboard Khusus SuperAdmin: Kendali Penuh Seluruh Sistem"""
     return ReplyKeyboardMarkup(
         [
             [KeyboardButton("📊 STATISTIK & OMZET"), KeyboardButton("💰 KENDALI BILLING & HARGA")],
-            [KeyboardButton("👑 AKTIFKAN VIP USER"), KeyboardButton("🎁 TAMBAH KUOTA USER")],
-            [KeyboardButton("🔍 CEK DETAIL USER"), KeyboardButton("📢 BROADCAST PENGUMUMAN")],
-            [KeyboardButton("💾 BACKUP DATABASE SEKARANG"), KeyboardButton("« KEMBALI KE MENU UTAMA")],
+            [KeyboardButton("👑 TAMBAH VIP PENGGUNA"), KeyboardButton("🎁 TAMBAH KUOTA GRATIS")],
+            [KeyboardButton("📢 BROADCAST PENGUMUMAN"), KeyboardButton("💾 BACKUP DATABASE SEKARANG")],
+            [KeyboardButton("« KEMBALI KE MENU UTAMA")],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -794,6 +794,30 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"Error dl_act: {e}", exc_info=True)
             await query.message.reply_text(f"❌ Gagal memproses unduhan: {e}", reply_markup=get_tools_hub_reply_keyboard())
+
+    # Handler Callback Panel Admin Billing
+    elif data.startswith("adm_set:"):
+        key = data.split(":")[1]
+        context.user_data["awaiting_admin_billing_key"] = key
+        label_map = {
+            "price_quota_10": "Harga Paket Topup Kuota (Rp)",
+            "price_vip_30d": "Harga Paket VIP Unlimited (Rp)",
+            "quota_amount": "Jumlah Kuota Tambahan (misal: 10 atau 15)",
+            "vip_days": "Jumlah Durasi Hari VIP (misal: 30 atau 60)",
+            "daily_free_quota": "Kuota Gratis Harian Pengguna (misal: 3)",
+            "referral_bonus": "Bonus Kuota Referral per Teman (misal: 2)",
+        }
+        lbl = label_map.get(key, key)
+        await query.message.reply_text(
+            f"✏️ <b>Ubah {lbl}:</b>\n\n"
+            f"Silakan ketikkan nilai angka baru sekarang di obrolan bot:",
+            parse_mode="HTML"
+        )
+        return
+
+    elif data == "adm_bill_refresh":
+        await admin_billing_command(update, context)
+        return
 
     elif data == "main_menu":
         user_tg = query.from_user
@@ -1793,288 +1817,93 @@ async def bantuan_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
-# ==================== HANDLER INTERAKTIF PANEL ADMIN ====================
+# ==================== SUITE KENDALI ADMIN BILLING & HARGA ====================
 
-# 1. INTERAKTIF: AKTIFKAN VIP PENGGUNA
-async def adm_vip_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
-        return ConversationHandler.END
-    msg = (
-        "👑 <b>AKTIVASI VIP PENGGUNA (INTERAKTIF)</b>\n\n"
-        "Silakan masukkan <b>User ID Telegram</b> target yang ingin diaktifkan status VIP-nya:\n"
-        "<i>(Ketik ID pengguna atau ketik <code>batal</code> untuk membatalkan)</i>"
-    )
-    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« BATALKAN")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
-    return ADM_VIP_ID
-
-async def adm_vip_id_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
-    if text in ["« BATALKAN", "batal", "Batal", "« KEMBALI KE MENU UTAMA"]:
-        await update.message.reply_text("Dibatalkan.", reply_markup=get_admin_hub_reply_keyboard())
-        return ConversationHandler.END
-
-    clean_id = re.sub(r"[^\d]", "", text)
-    if not clean_id:
-        await update.message.reply_text("⚠️ User ID harus berupa angka. Silakan masukkan kembali:")
-        return ADM_VIP_ID
-
-    context.user_data["adm_target_vip_id"] = int(clean_id)
-    msg = (
-        f"🎯 Target User ID: <code>{clean_id}</code>\n\n"
-        "Pilih atau ketikkan <b>Jumlah Hari Aktif VIP</b> yang ingin diberikan:\n"
-        "• <code>7</code> (1 Minggu)\n"
-        "• <code>30</code> (1 Bulan / Standar)\n"
-        "• <code>60</code> (2 Bulan)\n"
-        "• <code>365</code> (1 Tahun VIP)"
-    )
-    kb = ReplyKeyboardMarkup([
-        [KeyboardButton("7 Hari"), KeyboardButton("30 Hari")],
-        [KeyboardButton("60 Hari"), KeyboardButton("365 Hari")],
-        [KeyboardButton("« BATALKAN")],
-    ], resize_keyboard=True, is_persistent=True)
-    await update.message.reply_text(msg, reply_markup=kb, parse_mode="HTML")
-    return ADM_VIP_DAYS
-
-async def adm_vip_days_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
-    if text in ["« BATALKAN", "batal", "Batal", "« KEMBALI KE MENU UTAMA"]:
-        await update.message.reply_text("Dibatalkan.", reply_markup=get_admin_hub_reply_keyboard())
-        return ConversationHandler.END
-
-    target_id = context.user_data.get("adm_target_vip_id")
-    days_clean = re.sub(r"[^\d]", "", text)
-    if not days_clean:
-        await update.message.reply_text("⚠️ Jumlah hari tidak valid. Ketik angka hari:")
-        return ADM_VIP_DAYS
-
-    days = int(days_clean)
-    from datetime import timedelta
-    import sqlite3
-    vip_until = (datetime.now() + timedelta(days=days)).isoformat()
-
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("UPDATE users SET is_vip = 1, vip_until = ? WHERE user_id = ?", (vip_until, target_id))
-    conn.commit()
-    conn.close()
-
-    res_msg = (
-        f"👑 <b>AKUN VIP BERHASIL DIAKTIFKAN!</b>\n\n"
-        f"• User ID: <code>{target_id}</code>\n"
-        f"• Durasi: <b>{days} Hari</b>\n"
-        f"• Berlaku Hingga: <b>{vip_until[:10]}</b>\n"
-        f"• Status: Bebas Cetak Ribuan Berkas Unlimited"
-    )
-    await update.message.reply_text(res_msg, reply_markup=get_admin_hub_reply_keyboard(), parse_mode="HTML")
-
-    try:
-        await context.bot.send_message(
-            chat_id=target_id,
-            text=f"👑 <b>Selamat! Akun Anda telah diaktifkan sebagai VIP UNLIMITED ({days} Hari) oleh SuperAdmin!</b>\nNikmati bebas cetak seluruh dokumen tanpa kuota.",
-            parse_mode="HTML"
-        )
-    except Exception:
-        pass
-
-    return ConversationHandler.END
-
-
-# 2. INTERAKTIF: TAMBAH KUOTA GRATIS PENGGUNA
-async def adm_quota_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
-        return ConversationHandler.END
-    msg = (
-        "🎁 <b>TAMBAH KUOTA PENGGUNA (INTERAKTIF)</b>\n\n"
-        "Silakan masukkan <b>User ID Telegram</b> target yang ingin ditambahkan kuotanya:\n"
-        "<i>(Ketik ID pengguna atau ketik <code>batal</code> untuk membatalkan)</i>"
-    )
-    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« BATALKAN")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
-    return ADM_QUOTA_ID
-
-async def adm_quota_id_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
-    if text in ["« BATALKAN", "batal", "Batal", "« KEMBALI KE MENU UTAMA"]:
-        await update.message.reply_text("Dibatalkan.", reply_markup=get_admin_hub_reply_keyboard())
-        return ConversationHandler.END
-
-    clean_id = re.sub(r"[^\d]", "", text)
-    if not clean_id:
-        await update.message.reply_text("⚠️ User ID harus berupa angka. Silakan masukkan kembali:")
-        return ADM_QUOTA_ID
-
-    context.user_data["adm_target_quota_id"] = int(clean_id)
-    msg = (
-        f"🎯 Target User ID: <code>{clean_id}</code>\n\n"
-        "Pilih atau ketikkan <b>Jumlah Kuota Tambahan</b> yang ingin diberikan:\n"
-        "• <code>+5</code> Kuota\n"
-        "• <code>+10</code> Kuota\n"
-        "• <code>+20</code> Kuota\n"
-        "• <code>+50</code> Kuota"
-    )
-    kb = ReplyKeyboardMarkup([
-        [KeyboardButton("+5 Kuota"), KeyboardButton("+10 Kuota")],
-        [KeyboardButton("+20 Kuota"), KeyboardButton("+50 Kuota")],
-        [KeyboardButton("« BATALKAN")],
-    ], resize_keyboard=True, is_persistent=True)
-    await update.message.reply_text(msg, reply_markup=kb, parse_mode="HTML")
-    return ADM_QUOTA_QTY
-
-async def adm_quota_qty_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
-    if text in ["« BATALKAN", "batal", "Batal", "« KEMBALI KE MENU UTAMA"]:
-        await update.message.reply_text("Dibatalkan.", reply_markup=get_admin_hub_reply_keyboard())
-        return ConversationHandler.END
-
-    target_id = context.user_data.get("adm_target_quota_id")
-    qty_clean = re.sub(r"[^\d]", "", text)
-    if not qty_clean:
-        await update.message.reply_text("⚠️ Jumlah kuota tidak valid. Masukkan angka:")
-        return ADM_QUOTA_QTY
-
-    qty = int(qty_clean)
-    import sqlite3
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("UPDATE users SET quota_left = quota_left + ? WHERE user_id = ?", (qty, target_id))
-    cur.execute("SELECT quota_left FROM users WHERE user_id = ?", (target_id,))
-    row = cur.fetchone()
-    total_now = row[0] if row else qty
-    conn.commit()
-    conn.close()
-
-    res_msg = (
-        f"🎁 <b>KUOTA BERHASIL DITAMBAHKAN!</b>\n\n"
-        f"• User ID: <code>{target_id}</code>\n"
-        f"• Tambahan: <b>+{qty} Kuota</b>\n"
-        f"• Total Kuota Sekarang: <b>{total_now}x</b>"
-    )
-    await update.message.reply_text(res_msg, reply_markup=get_admin_hub_reply_keyboard(), parse_mode="HTML")
-
-    try:
-        await context.bot.send_message(
-            chat_id=target_id,
-            text=f"🎁 <b>Admin telah menambahkan +{qty} Kuota Gratis ke akun Anda!</b>\nTotal sisa kuota Anda sekarang: <b>{total_now}x</b>.",
-            parse_mode="HTML"
-        )
-    except Exception:
-        pass
-
-    return ConversationHandler.END
-
-
-# 3. INTERAKTIF: BROADCAST MASSAL DENGAN KONFIRMASI
-async def adm_bcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
-        return ConversationHandler.END
-    msg = (
-        "📢 <b>SIARAN PENGUMUMAN MASSAL (BROADCAST)</b>\n\n"
-        "Ketikkan teks pesan yang ingin Anda siarkan ke <b>seluruh pengguna bot</b>:\n"
-        "<i>(Dapat menggunakan format HTML seperti tebal, miring, dan tautan)</i>\n\n"
-        "Ketik teks pesan Anda sekarang:"
-    )
-    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« BATALKAN")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
-    return ADM_BCAST_MSG
-
-async def adm_bcast_msg_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
-    if text in ["« BATALKAN", "batal", "Batal", "« KEMBALI KE MENU UTAMA"]:
-        await update.message.reply_text("Broadcast dibatalkan.", reply_markup=get_admin_hub_reply_keyboard())
-        return ConversationHandler.END
-
-    context.user_data["adm_bcast_text"] = text
-
-    import sqlite3
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM users")
-    total_u = cur.fetchone()[0]
-    conn.close()
-
-    preview = (
-        f"📢 <b>PRATINJAU SIARAN PENGUMUMAN:</b>\n\n"
-        f"{text}\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"👥 Penerima: <b>{total_u:,} pengguna terdaftar</b>\n"
-        f"Apakah Anda yakin ingin mengirim pesan ini sekarang?"
-    )
-    kb = ReplyKeyboardMarkup([
-        [KeyboardButton("🚀 KIRIMKAN SEKARANG"), KeyboardButton("« BATALKAN")],
-    ], resize_keyboard=True, is_persistent=True)
-    await update.message.reply_text(preview, reply_markup=kb, parse_mode="HTML")
-    return ADM_BCAST_CONFIRM
-
-async def adm_bcast_confirm_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
-    if text != "🚀 KIRIMKAN SEKARANG":
-        await update.message.reply_text("Broadcast dibatalkan.", reply_markup=get_admin_hub_reply_keyboard())
-        return ConversationHandler.END
-
-    bcast_msg = context.user_data.get("adm_bcast_text")
-    if not bcast_msg:
-        await update.message.reply_text("Pesan kosong.", reply_markup=get_admin_hub_reply_keyboard())
-        return ConversationHandler.END
-
-    status_msg = await update.message.reply_text("⏳ <i>Sedang mengirimkan broadcast ke seluruh pengguna...</i>", parse_mode="HTML")
-    import sqlite3
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT user_id FROM users")
-    users = [r[0] for r in cur.fetchall()]
-    conn.close()
-
-    success_cnt = 0
-    fail_cnt = 0
-    for u in users:
-        try:
-            await context.bot.send_message(chat_id=u, text=f"📢 <b>PENGUMUMAN RESMI:</b>\n\n{bcast_msg}", parse_mode="HTML")
-            success_cnt += 1
-        except Exception:
-            fail_cnt += 1
-
-    res = (
-        f"✅ <b>SIARAN PENGUMUMAN SELESAI!</b>\n\n"
-        f"• Terkirim Sukses: <b>{success_cnt:,} pengguna</b>\n"
-        f"• Gagal / Ditolak (Blokir): <b>{fail_cnt:,}</b>"
-    )
-    await status_msg.edit_text(res, parse_mode="HTML")
-    await update.message.reply_text("Kembali ke panel admin:", reply_markup=get_admin_hub_reply_keyboard())
-    return ConversationHandler.END
-
-# 4. CEK DETAIL INFORMASI PENGGUNA
-async def admin_checkuser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ADMIN_IDS:
+async def admin_billing_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Perintah Admin /billing untuk melihat & mengatur seluruh harga paket pembayaran"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
         return
+
+    from billing import get_all_billing_settings
+    st = get_all_billing_settings()
+
+    p_q10 = int(st.get("price_quota_10", "5000"))
+    p_vip = int(st.get("price_vip_30d", "15000"))
+    q_amt = st.get("quota_amount", "10")
+    vip_d = st.get("vip_days", "30")
+    daily_q = st.get("daily_free_quota", "3")
+    ref_b = st.get("referral_bonus", "2")
+    status_p = "✅ AKTIF" if st.get("payment_active", "1") == "1" else "⛔ MAINTENANCE"
+
+    kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✏️ Ubah Harga Kuota", callback_data="adm_set:price_quota_10"),
+            InlineKeyboardButton("✏️ Ubah Harga VIP", callback_data="adm_set:price_vip_30d"),
+        ],
+        [
+            InlineKeyboardButton("✏️ Ubah Jumlah Kuota", callback_data="adm_set:quota_amount"),
+            InlineKeyboardButton("✏️ Ubah Durasi Hari VIP", callback_data="adm_set:vip_days"),
+        ],
+        [
+            InlineKeyboardButton("✏️ Kuota Gratis Harian", callback_data="adm_set:daily_free_quota"),
+            InlineKeyboardButton("✏️ Bonus Referral", callback_data="adm_set:referral_bonus"),
+        ],
+        [
+            InlineKeyboardButton("🔄 Refresh Data", callback_data="adm_bill_refresh"),
+            InlineKeyboardButton("« Tutup", callback_data="main_menu"),
+        ]
+    ])
+
+    text = (
+        "👑 <b>PANEL KENDALI BILLING & HARGA (ADMIN)</b>\n\n"
+        f"• Status Gateway QRIS: <b>{status_p}</b>\n"
+        f"• Harga Paket Kuota (+{q_amt}): <b>Rp {p_q10:,}</b>\n"
+        f"• Harga Paket VIP ({vip_d} Hari): <b>Rp {p_vip:,}</b>\n"
+        f"• Kuota Gratis Harian User: <b>{daily_q}x per hari</b>\n"
+        f"• Bonus Kuota Referral: <b>+{ref_b} per teman</b>\n\n"
+        "💡 <i>Ketuk tombol di bawah untuk mengubah nilai secara langsung, atau gunakan perintah cepat:</i>\n"
+        "• <code>/setprice quota 5000</code>\n"
+        "• <code>/setprice vip 15000</code>"
+    )
+    if update.callback_query:
+        await update.callback_query.edit_message_text(text, reply_markup=kb, parse_mode="HTML")
+    else:
+        await update.message.reply_text(text, reply_markup=kb, parse_mode="HTML")
+
+async def admin_setprice_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Perintah cepat: /setprice [quota|vip] [NOMINAL_RUPIAH]"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        return
+
     args = context.args
-    if not args:
-        await update.message.reply_text("Ketikkan: <code>/checkuser [USER_ID]</code>", parse_mode="HTML")
+    if len(args) < 2:
+        await update.message.reply_text(
+            "Format:\n"
+            "• <code>/setprice quota 7000</code> (Ubah harga paket kuota)\n"
+            "• <code>/setprice vip 20000</code> (Ubah harga paket VIP)",
+            parse_mode="HTML"
+        )
         return
+
+    target = args[0].lower().strip()
+    val_str = re.sub(r"[^\d]", "", args[1])
     try:
-        t_id = int(args[0])
-        import sqlite3
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        cur.execute("SELECT user_id, username, first_name, quota_left, is_vip, vip_until, total_generated, created_at FROM users WHERE user_id = ?", (t_id,))
-        row = cur.fetchone()
-        conn.close()
-        if not row:
-            await update.message.reply_text(f"❌ User ID <code>{t_id}</code> tidak ditemukan di database.")
+        val = int(val_str)
+        if val < 500:
+            await update.message.reply_text("⚠️ Minimal nominal Rp 500.")
             return
 
-        u_id, u_name, f_name, q_left, is_v, v_until, tot_gen, c_at = row
-        v_status = f"👑 VIP Aktif (s/d {v_until[:10]})" if is_v else "Standar (Gratis)"
-        un_str = f"@{u_name}" if u_name else "-"
-
-        info = (
-            f"👤 <b>INFORMASI DETAIL PENGGUNA:</b>\n\n"
-            f"• ID: <code>{u_id}</code>\n"
-            f"• Nama: <b>{html.escape(f_name or '-')}</b>\n"
-            f"• Username: {un_str}\n"
-            f"• Status: <b>{v_status}</b>\n"
-            f"• Sisa Kuota: <b>{q_left}x</b>\n"
-            f"• Total Berkas Dibuat: <b>{tot_gen}</b>\n"
-            f"• Bergabung Sejak: <code>{c_at[:10] if c_at else '-'}</code>"
-        )
-        await update.message.reply_text(info, parse_mode="HTML")
+        from billing import set_billing_setting
+        if target in ["quota", "kuota"]:
+            set_billing_setting("price_quota_10", str(val))
+            await update.message.reply_text(f"✅ Harga Paket Kuota berhasil diubah menjadi: <b>Rp {val:,}</b>", parse_mode="HTML")
+        elif target in ["vip", "unlimited"]:
+            set_billing_setting("price_vip_30d", str(val))
+            await update.message.reply_text(f"✅ Harga Paket VIP Unlimited berhasil diubah menjadi: <b>Rp {val:,}</b>", parse_mode="HTML")
+        else:
+            await update.message.reply_text("⚠️ Target tidak valid. Gunakan 'quota' atau 'vip'.")
     except Exception as e:
         await update.message.reply_text(f"❌ Gagal: {e}")
 
@@ -2482,24 +2311,35 @@ async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             await admin_billing_command(update, context)
             return
 
-    elif text in ["👑 AKTIFKAN VIP USER", "👑 TAMBAH VIP PENGGUNA"]:
+    elif text == "👑 TAMBAH VIP PENGGUNA":
         if user.id in ADMIN_IDS:
-            return await adm_vip_start(update, context)
+            await update.message.reply_text(
+                "👑 <b>Aktivasi VIP Pengguna Manual:</b>\n\n"
+                "Ketikkan perintah dengan format:\n"
+                "<code>/setvip [USER_ID] [JUMLAH_HARI]</code>\n\n"
+                "<i>Contoh:</i> <code>/setvip 5606826328 30</code>",
+                parse_mode="HTML"
+            )
+            return
 
-    elif text in ["🎁 TAMBAH KUOTA USER", "🎁 TAMBAH KUOTA GRATIS"]:
+    elif text == "🎁 TAMBAH KUOTA GRATIS":
         if user.id in ADMIN_IDS:
-            return await adm_quota_start(update, context)
+            await update.message.reply_text(
+                "🎁 <b>Tambah Kuota Pengguna Manual:</b>\n\n"
+                "Ketikkan perintah dengan format:\n"
+                "<code>/addquota [USER_ID] [JUMLAH]</code>\n\n"
+                "<i>Contoh:</i> <code>/addquota 5606826328 20</code>",
+                parse_mode="HTML"
+            )
+            return
 
     elif text == "📢 BROADCAST PENGUMUMAN":
         if user.id in ADMIN_IDS:
-            return await adm_bcast_start(update, context)
-
-    elif text == "🔍 CEK DETAIL USER":
-        if user.id in ADMIN_IDS:
             await update.message.reply_text(
-                "🔍 <b>Cek Informasi Pengguna:</b>\n\n"
-                "Ketikkan perintah:\n"
-                "<code>/checkuser [USER_ID]</code>",
+                "📢 <b>Kirim Siaran Broadcast Massal:</b>\n\n"
+                "Ketikkan perintah dengan format:\n"
+                "<code>/broadcast [PESAN_PENGUMUMAN]</code>\n\n"
+                "<i>Contoh:</i> <code>/broadcast Halo! Server telah di-update dengan fitur baru.</code>",
                 parse_mode="HTML"
             )
             return
@@ -4538,47 +4378,6 @@ def main():
     app.add_handler(CommandHandler("stats", admin_stats_command))
     app.add_handler(CommandHandler("addquota", admin_addquota_command))
     app.add_handler(CommandHandler("broadcast", admin_broadcast_command))
-    # Conversation Handlers Khusus Panel Admin (VIP, Quota, Broadcast Interaktif)
-    adm_vip_conv = ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.Regex("^(👑 AKTIFKAN VIP USER|👑 TAMBAH VIP PENGGUNA)$"), adm_vip_start),
-            CommandHandler("setvip_dialog", adm_vip_start),
-        ],
-        states={
-            ADM_VIP_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, adm_vip_id_received)],
-            ADM_VIP_DAYS: [MessageHandler(filters.TEXT & ~filters.COMMAND, adm_vip_days_received)],
-        },
-        fallbacks=[CommandHandler("cancel", start_command)],
-    )
-    app.add_handler(adm_vip_conv)
-
-    adm_quota_conv = ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.Regex("^(🎁 TAMBAH KUOTA USER|🎁 TAMBAH KUOTA GRATIS)$"), adm_quota_start),
-            CommandHandler("addquota_dialog", adm_quota_start),
-        ],
-        states={
-            ADM_QUOTA_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, adm_quota_id_received)],
-            ADM_QUOTA_QTY: [MessageHandler(filters.TEXT & ~filters.COMMAND, adm_quota_qty_received)],
-        },
-        fallbacks=[CommandHandler("cancel", start_command)],
-    )
-    app.add_handler(adm_quota_conv)
-
-    adm_bcast_conv = ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.Regex("^(📢 BROADCAST PENGUMUMAN|📢 Broadcast)$"), adm_bcast_start),
-            CommandHandler("broadcast_dialog", adm_bcast_start),
-        ],
-        states={
-            ADM_BCAST_MSG: [MessageHandler(filters.TEXT & ~filters.COMMAND, adm_bcast_msg_received)],
-            ADM_BCAST_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, adm_bcast_confirm_received)],
-        },
-        fallbacks=[CommandHandler("cancel", start_command)],
-    )
-    app.add_handler(adm_bcast_conv)
-    app.add_handler(CommandHandler("checkuser", admin_checkuser_command))
-
 
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_button_handler))
