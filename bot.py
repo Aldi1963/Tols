@@ -622,6 +622,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+    logger.info(f"CALLBACK_QUERY TRIGGERED: data='{data}' from_user={query.from_user.id}")
     user = update.effective_user
     u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
 
@@ -4573,7 +4574,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_button_handler))
 
     print("Bot polling running smoothly...")
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True, allowed_updates=['message', 'callback_query'])
 
 
 if __name__ == "__main__":
