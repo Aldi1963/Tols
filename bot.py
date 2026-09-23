@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any, List
 import os
 import sys
+import re
 import logging
 import io
 import random
@@ -802,6 +803,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Handler Callback Panel Admin Billing
     elif data.startswith("adm_set:"):
+        logger.info(f"ADMIN BILLING CALLBACK RECEIVED: {data} from {user.id}")
         key = data.split(":")[1]
         context.user_data["awaiting_admin_billing_key"] = key
         label_map = {
