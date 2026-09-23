@@ -6,7 +6,7 @@ import shutil
 import sqlite3
 import urllib.request
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 BASE_DIR = Path("/home/ubuntu/yowes")
@@ -23,8 +23,80 @@ def get_bot_token():
                     return parts[1].strip().strip('"\';')
     return None
 
+def send_telegram_message(token: str, chat_id: int, text: str):
+    """Helper kirim pesan Telegram langsung via urllib"""
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={"Content-Type": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return True
+    except Exception as e:
+        print(f"Error sending msg to {chat_id}: {e}")
+        return False
+
+def check_and_notify_expiring_vip():
+    """
+    Memeriksa akun VIP yang akan kedaluwarsa dalam H-3 dan H-1,
+    lalu mengirimkan pesan pengingat sopan dengan link perpanjang.
+    """
+    token = get_bot_token()
+    if not token or not DB_PATH.exists():
+        return
+
+    import json
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    now = datetime.now()
+    # Dapatkan seluruh user VIP aktif
+    cur.execute("SELECT user_id, first_name, vip_until FROM users WHERE is_vip = 1 AND vip_until IS NOT NULL")
+    vip_users = cur.fetchall()
+
+    notified_count = 0
+    for u_id, f_name, v_until in vip_users:
+        try:
+            exp_date = datetime.fromisoformat(v_until)
+            diff = exp_date - now
+            days_left = diff.days
+
+            # Notifikasi H-3 (antara 2 dan 3 hari)
+            if 2 <= days_left <= 3:
+                msg = (
+                    f"⏰ <b>Pemberitahuan Masa Aktif VIP (H-3)</b>\n\n"
+                    f"Halo <b>{f_name or 'Pengguna'}</b>! 👋\n"
+                    f"Masa langganan 👑 <b>VIP UNLIMITED</b> Anda akan berakhir dalam <b>{days_left} hari</b> (pada {v_until[:10]}).\n\n"
+                    "Agar akses bebas cetak ribuan dokumen & seluruh kotak alat tanpa batas tetap aktif, Anda dapat memperpanjang paket VIP kapan saja melalui menu <b>👑 PROFIL & VIP</b>."
+                )
+                send_telegram_message(token, u_id, msg)
+                notified_count += 1
+
+            # Notifikasi H-1 (kurang dari 24 jam)
+            elif 0 <= days_left <= 1:
+                msg = (
+                    f"⚠️ <b>Perhatian: Masa Aktif VIP Berakhir Besok! (H-1)</b>\n\n"
+                    f"Halo <b>{f_name or 'Pengguna'}</b>! 👋\n"
+                    f"Masa langganan 👑 <b>VIP UNLIMITED</b> Anda berakhir besok pada <b>{v_until[:10]}</b>.\n\n"
+                    "Segera perpanjang langganan Anda melalui tombol <b>👑 Beli VIP 30 Hari</b> pada menu profil untuk menghindari gangguan layanan."
+                )
+                send_telegram_message(token, u_id, msg)
+                notified_count += 1
+
+        except Exception as e:
+            print(f"Error checking vip for {u_id}: {e}")
+
+    conn.close()
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] VIP Reminder: {notified_count} pengguna dikirimi pengingat.")
+
 def clean_temp_files(max_age_seconds=3600):
-    """Membersihkan file video/audio/gambar sementara di /tmp yang berusia lebih dari 1 jam"""
     now = time.time()
     patterns = [
         "/tmp/*.mp4", "/tmp/*.mp3", "/tmp/*.m4a", "/tmp/*.part",
@@ -53,17 +125,10 @@ def clean_temp_files(max_age_seconds=3600):
     return deleted_count, mb_saved
 
 def backup_database_to_telegram():
-    """Membuat salinan snapshot users.db dan mengirimkannya ke Admin Telegram"""
     token = get_bot_token()
-    if not token:
-        print("Bot token tidak ditemukan!")
+    if not token or not DB_PATH.exists():
         return False
 
-    if not DB_PATH.exists():
-        print(f"Database {DB_PATH} tidak ditemukan!")
-        return False
-
-    # Dapatkan ringkasan statistik
     total_users = 0
     total_vip = 0
     total_docs = 0
@@ -84,7 +149,6 @@ def backup_database_to_telegram():
     except Exception as e:
         print(f"Error reading db stats: {e}")
 
-    # Buat snapshot aman menggunakan sqlite3 backup API
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_filename = f"users_backup_{timestamp}.db"
     backup_path = f"/tmp/{backup_filename}"
@@ -97,12 +161,10 @@ def backup_database_to_telegram():
         dst.close()
         src.close()
     except Exception as e:
-        print(f"Error creating sqlite snapshot, fallback to copy: {e}")
         shutil.copy2(DB_PATH, backup_path)
 
     db_size_kb = os.path.getsize(backup_path) / 1024
 
-    # Kirim ke Telegram Admin via sendDocument
     caption = (
         f"🗄️ <b>Laporan Auto-Backup Database Yowes Bot</b>\n\n"
         f"• Waktu Backup: <code>{datetime.now().strftime('%d %B %Y, %H:%M:%S')}</code>\n"
@@ -114,24 +176,18 @@ def backup_database_to_telegram():
     )
 
     url = f"https://api.telegram.org/bot{token}/sendDocument"
-
-    # Kirim multipart/form-data
     boundary = "----WebKitFormBoundary" + str(int(time.time()))
     body = bytearray()
 
-    # Field chat_id
     body.extend(f"--{boundary}\r\n".encode('utf-8'))
     body.extend(f'Content-Disposition: form-data; name="chat_id"\r\n\r\n{ADMIN_ID}\r\n'.encode('utf-8'))
 
-    # Field parse_mode
     body.extend(f"--{boundary}\r\n".encode('utf-8'))
     body.extend(f'Content-Disposition: form-data; name="parse_mode"\r\n\r\nHTML\r\n'.encode('utf-8'))
 
-    # Field caption
     body.extend(f"--{boundary}\r\n".encode('utf-8'))
     body.extend(f'Content-Disposition: form-data; name="caption"\r\n\r\n{caption}\r\n'.encode('utf-8'))
 
-    # Field document
     with open(backup_path, "rb") as f:
         doc_bytes = f.read()
 
@@ -149,14 +205,11 @@ def backup_database_to_telegram():
 
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
-            print(f"Telegram response: {resp.status}")
-            print("Backup database berhasil dikirim ke Admin Telegram!")
-            # Hapus file temporary backup
             if os.path.exists(backup_path):
                 os.remove(backup_path)
             return True
     except Exception as e:
-        print(f"Gagal mengirim backup ke Telegram: {e}")
+        print(f"Gagal kirim backup: {e}")
         return False
 
 if __name__ == "__main__":
@@ -165,3 +218,5 @@ if __name__ == "__main__":
         clean_temp_files()
     if action in ["backup", "all"]:
         backup_database_to_telegram()
+    if action in ["remind_vip", "all"]:
+        check_and_notify_expiring_vip()
