@@ -3,8 +3,9 @@ import tempfile
 import yt_dlp
 import re
 import urllib.request
+import urllib.parse
 import json
-import subprocess
+import time
 
 def is_supported_url(url: str) -> bool:
     patterns = [
@@ -22,10 +23,6 @@ def extract_url_from_text(text: str) -> str:
     return match.group(1) if match else None
 
 def get_media_info(url: str) -> dict:
-    """
-    Mengambil informasi pratinjau media (Judul, Thumbnail, Durasi, Platform, dan Tipe Konten)
-    secara instan tanpa mengunduh seluruh berkas video terlebih dahulu.
-    """
     url_lower = url.lower()
 
     # 1. TikTok via TikWM API (Sangat cepat ~1 detik)
@@ -61,7 +58,32 @@ def get_media_info(url: str) -> dict:
         except Exception:
             pass
 
-    # 2. Instagram, Facebook, YouTube, Twitter via yt-dlp metadata
+    # 2. YouTube Fallback via Official oEmbed (Anti-Bot Bypass)
+    if 'youtube.com' in url_lower or 'youtu.be' in url_lower:
+        try:
+            oembed_url = f"https://noembed.com/embed?url={urllib.parse.quote(url)}"
+            req_oe = urllib.request.Request(oembed_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req_oe, timeout=8) as r:
+                meta = json.loads(r.read().decode('utf-8'))
+                title = meta.get('title') or "YouTube Video"
+                author = meta.get('author_name') or "YouTube Creator"
+                thumb = meta.get('thumbnail_url') or ""
+                return {
+                    'url': url,
+                    'platform': 'YouTube',
+                    'title': title,
+                    'duration': 0,
+                    'thumbnail': thumb,
+                    'is_slideshow': False,
+                    'images_count': 0,
+                    'has_music': True,
+                    'author': author,
+                    'tikwm_data': None
+                }
+        except Exception:
+            pass
+
+    # 3. Instagram, Facebook, Twitter via yt-dlp metadata
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
@@ -85,16 +107,91 @@ def get_media_info(url: str) -> dict:
             'tikwm_data': None
         }
 
+def download_youtube_loader(url: str, mode: str = "video_hd") -> dict:
+    """Download video/audio YouTube via Loader engine tanpa IP block."""
+    fmt = "mp3" if mode == "audio" else ("480" if mode == "video_sd" else "1080")
+    init_url = f"https://loader.to/ajax/download.php?format={fmt}&url={urllib.parse.quote(url)}"
+    req_init = urllib.request.Request(init_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+    with urllib.request.urlopen(req_init, timeout=12) as r:
+        init_res = json.loads(r.read().decode('utf-8'))
+
+    prog_url = init_res.get('progress_url')
+    title = init_res.get('title') or "YouTube Video"
+    clean_title = re.sub(r'[\\/*?:"<>|]', '', title)[:50]
+
+    if not prog_url:
+        raise RuntimeError("Gagal menginisialisasi downloader YouTube.")
+
+    dl_url = None
+    for _ in range(20):
+        time.sleep(2)
+        try:
+            req_p = urllib.request.Request(prog_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req_p, timeout=10) as rp:
+                pdata = json.loads(rp.read().decode('utf-8'))
+                if pdata.get('download_url'):
+                    dl_url = pdata.get('download_url')
+                    break
+        except Exception:
+            pass
+
+    if not dl_url:
+        raise RuntimeError("Proses konversi streaming YouTube melebihi batas waktu. Silakan coba kembali sesaat lagi.")
+
+    req_dl = urllib.request.Request(dl_url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req_dl, timeout=120) as r:
+        data = r.read()
+
+    size_mb = len(data) / (1024 * 1024)
+    if size_mb > 49.5:
+        raise RuntimeError(f"Ukuran berkas ({size_mb:.1f} MB) melampaui batas kirim bot Telegram (50 MB).")
+
+    if mode == "audio":
+        return {
+            'type': 'audio',
+            'data': data,
+            'filename': f"{clean_title}.mp3",
+            'title': title,
+            'performer': 'YouTube Audio',
+            'duration': 0,
+        }
+    else:
+        return {
+            'type': 'video',
+            'data': data,
+            'filename': f"{clean_title}.mp4",
+            'title': title,
+            'duration': 0,
+            'filesize_mb': size_mb,
+            'platform': 'YouTube'
+        }
+
 def download_media_custom(url: str, mode: str = "video_hd", tikwm_cache: dict = None) -> dict:
-    """
-    Mengunduh media sesuai pilihan pengguna:
-    - 'video_hd': Video kualitas tertinggi tanpa watermark
-    - 'video_sd': Video hemat kuota (480p)
-    - 'audio': Musik / Sound saja (MP3)
-    - 'thumbnail': Gambar sampul cover video
-    - 'slideshow': Mengunduh seluruh slide foto TikTok
-    """
     url_lower = url.lower()
+
+    # --- JIKA YOUTUBE ---
+    if 'youtube.com' in url_lower or 'youtu.be' in url_lower:
+        if mode == "thumbnail":
+            m = re.search(r'(?:v=|youtu\.be/|shorts/)([\w-]{11})', url)
+            if m:
+                vid = m.group(1)
+                thumb_url = f"https://i.ytimg.com/vi/{vid}/maxresdefault.jpg"
+                try:
+                    req_th = urllib.request.Request(thumb_url, headers={"User-Agent": "Mozilla/5.0"})
+                    with urllib.request.urlopen(req_th, timeout=10) as rth:
+                        th_bytes = rth.read()
+                except Exception:
+                    thumb_url = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+                    req_th = urllib.request.Request(thumb_url, headers={"User-Agent": "Mozilla/5.0"})
+                    with urllib.request.urlopen(req_th, timeout=10) as rth:
+                        th_bytes = rth.read()
+                return {
+                    'type': 'image',
+                    'data': th_bytes,
+                    'filename': f"Cover_{vid}.jpg",
+                    'title': 'YouTube Cover'
+                }
+        return download_youtube_loader(url, mode=mode)
 
     # --- JIKA TIKTOK ---
     if 'tiktok.com' in url_lower:
@@ -115,10 +212,8 @@ def download_media_custom(url: str, mode: str = "video_hd", tikwm_cache: dict = 
 
         title = v_data.get('title') or "TikTok Content"
         clean_title = re.sub(r'[\\/*?:"<>|]', '', title)[:50]
-
         headers_dl = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
-        # A. Mode Audio MP3
         if mode == "audio":
             music_url = v_data.get('music')
             if not music_url:
@@ -135,7 +230,6 @@ def download_media_custom(url: str, mode: str = "video_hd", tikwm_cache: dict = 
                 'duration': int(v_data.get('duration') or 0),
             }
 
-        # B. Mode Thumbnail / Cover
         if mode == "thumbnail":
             cov_url = v_data.get('origin_cover') or v_data.get('cover')
             if not cov_url:
@@ -150,7 +244,6 @@ def download_media_custom(url: str, mode: str = "video_hd", tikwm_cache: dict = 
                 'title': title
             }
 
-        # C. Mode Slideshow Foto
         if mode == "slideshow" or (v_data.get('images') and mode != "audio"):
             images = v_data.get('images', [])
             downloaded_imgs = []
@@ -165,7 +258,6 @@ def download_media_custom(url: str, mode: str = "video_hd", tikwm_cache: dict = 
                 'music_url': v_data.get('music')
             }
 
-        # D. Mode Video HD / SD
         play_url = v_data.get('hdplay') if (mode == "video_hd" and v_data.get('hdplay')) else v_data.get('play')
         if not play_url:
             play_url = v_data.get('play') or v_data.get('wmplay')
@@ -188,7 +280,7 @@ def download_media_custom(url: str, mode: str = "video_hd", tikwm_cache: dict = 
             'platform': 'TikTok'
         }
 
-    # --- JIKA INSTAGRAM / YOUTUBE / FACEBOOK / TWITTER ---
+    # --- JIKA INSTAGRAM / FACEBOOK / TWITTER ---
     with tempfile.TemporaryDirectory() as tmpdir:
         out_tmpl = os.path.join(tmpdir, "%(id)s.%(ext)s")
 
@@ -230,7 +322,6 @@ def download_media_custom(url: str, mode: str = "video_hd", tikwm_cache: dict = 
             clean_title = re.sub(r'[\\/*?:"<>|]', '', title)[:50]
             duration = int(info.get('duration') or 0)
 
-            # Cari file hasil download
             found_file = None
             for fname in os.listdir(tmpdir):
                 target_ext = '.mp3' if mode == 'audio' else '.mp4'
@@ -268,4 +359,4 @@ def download_media_custom(url: str, mode: str = "video_hd", tikwm_cache: dict = 
                     'platform': 'Media'
                 }
 
-print("Interactive media_downloader.py verified!")
+print("Enhanced media_downloader.py verified!")
