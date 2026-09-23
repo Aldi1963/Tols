@@ -206,7 +206,8 @@ def create_clipku_payment(user_id: int, package_type: str, user_name: str) -> di
         "customer_name": user_name or f"User {user_id}",
         "customer_email": f"user{user_id}@clipku.bot",
         "customer_phone": "081234567890",
-        "payment_method": "qris"
+        "payment_method": "qris",
+        "webhook_url": "https://m.clipku.com/webhook-yowes.php"
     }
 
     req = urllib.request.Request(
