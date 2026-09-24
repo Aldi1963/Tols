@@ -128,6 +128,13 @@ Proyek ini kini hadir sebagai platform **API as a Service (B2B SaaS)** berkinerj
   * `POST /api/v1/pdf/protect`: Proteksi dan enkripsi dokumen PDF dengan password.
   * `POST /api/v1/mockup/wood-desk`: Render 3D kartu di atas meja kayu fotorealistis.
 
+### 12. Suite Keamanan Identitas, QR Code & Utilitas Visual
+* **🛡️ Watermark KTP Aman (Anti-Pinjol)**: Melindungi foto KTP/kartu identitas dari jeratan pinjol ilegal dengan membubuhkan teks watermark diagonal berulang semi-transparan yang memotong bagian tengah kartu.
+* **✨ AI Penjernih Foto (HD Unblur)**: Merekonstruksi detail foto lama/buram, meningkatkan kontras, dan menaikkan ketajaman teks dokumen secara instan.
+* **📱 Branded QR Code Generator**: Pembuat QR code modern beresolusi tinggi dengan modul sudut melengkung (*rounded*) dan penyematan logo di tengah.
+* **📊 Diagram Alur / Flowchart Instan**: Cukup ketik alur teks (`A -> B -> C`), bot otomatis merender bagan alur proses estetis beresolusi tinggi.
+* **📲 1-Klik Share Referral ke WhatsApp**: Tombol instan membagikan tautan undangan referral langsung ke WhatsApp dan grup Telegram.
+
 ### 10. Pemeliharaan Otomatis, Cronjob & Keamanan Server
 * **Auto-Backup Harian Database**: Skrip `backup_and_clean.py` dijadwalkan via Linux crontab setiap hari pukul 02:00 pagi untuk mencadangkan database pengguna ke chat pribadi Admin.
 * **Pembersihan Cache Folder `/tmp`**: Menghapus berkas sementara (video download, gambar render, file audio) yang berumur lebih dari 1 jam untuk mencegah kepenuhan disk VPS.
