@@ -794,17 +794,23 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"Error dl_act: {e}", exc_info=True)
             err_msg = str(e)
-            if "melebihi batas 50 MB" in err_msg or "melebihi batas" in err_msg:
-                # Sediakan tombol unduh langsung via browser
-                direct_kb = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🎵 Unduh Audio MP3 Saja", callback_data=f"dl_act:audio:{session_key}")],
-                    [InlineKeyboardButton("📱 Coba Video Hemat (480p)", callback_data=f"dl_act:video_sd:{session_key}")],
-                    [InlineKeyboardButton("« Kembali ke Menu Alat", callback_data="main_menu")]
-                ])
+            if "OVERSIZE_50MB:" in err_msg or "melebihi batas 50 MB" in err_msg or "melebihi batas" in err_msg:
+                direct_link = err_msg.split("OVERSIZE_50MB:")[1].strip() if "OVERSIZE_50MB:" in err_msg else ""
+                
+                btn_rows = []
+                if direct_link:
+                    btn_rows.append([InlineKeyboardButton("📥 Unduh Video HD Utuh (Browser)", url=direct_link)])
+                btn_rows.append([InlineKeyboardButton("🎵 Unduh Audio MP3 Saja", callback_data=f"dl_act:audio:{session_key}")])
+                btn_rows.append([InlineKeyboardButton("📱 Coba Video Hemat (480p)", callback_data=f"dl_act:video_sd:{session_key}")])
+                btn_rows.append([InlineKeyboardButton("« Kembali ke Menu Alat", callback_data="main_menu")])
+                
+                direct_kb = InlineKeyboardMarkup(btn_rows)
                 msg_limit = (
-                    "⚠️ <b>Video ini berukuran sangat besar (>50 MB)</b> karena berdurasi panjang (Full Album).\n\n"
-                    "💡 <i>Server Telegram membatasi pengiriman berkas langsung di ruang obrolan maksimal 50 MB.\n"
-                    "Silakan pilih format di bawah agar dapat dikirim:</i>"
+                    "⚠️ <b>Video YouTube ini berukuran sangat besar (>50 MB)!</b>\n\n"
+                    "Server Telegram membatasi pengiriman berkas langsung di chat maksimal 50 MB.\n\n"
+                    "💡 <b>Pilihan Solusi untuk Anda:</b>\n"
+                    "• Ketuk <b>📥 Unduh Video HD Utuh</b> untuk download langsung via browser tanpa batasan 50 MB\n"
+                    "• Atau pilih format <b>🎵 Audio MP3</b> / <b>📱 Video Hemat 480p</b> untuk dikirim langsung ke obrolan ini:"
                 )
                 await query.message.reply_text(
                     msg_limit,

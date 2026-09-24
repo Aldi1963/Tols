@@ -138,6 +138,9 @@ def download_youtube_loader(url: str, mode: str = "video_hd") -> dict:
     if not dl_url:
         raise RuntimeError("Proses konversi streaming YouTube melebihi batas waktu. Silakan coba kembali sesaat lagi.")
 
+    # Simpan URL direct download agar jika file > 50MB, pengguna bisa unduh langsung via browser
+    direct_download_link = dl_url
+
     req_dl = urllib.request.Request(dl_url, headers={"User-Agent": "Mozilla/5.0"})
     MAX_BYTES = int(49.2 * 1024 * 1024)
     data = bytearray()
@@ -149,8 +152,7 @@ def download_youtube_loader(url: str, mode: str = "video_hd") -> dict:
             data.extend(chunk)
             if len(data) > MAX_BYTES:
                 raise RuntimeError(
-                    f"⚠️ Video YouTube ini berdurasi panjang (Full Album) sehingga ukurannya melebihi batas 50 MB bot Telegram.\n\n"
-                    f"💡 <i>Solusi:</i> Silakan pilih format <b>[ 🎵 Musik / Audio (MP3) ]</b> atau <b>[ 📱 Video Hemat (480p) ]</b> agar ukurannya pas untuk dikirim."
+                    f"OVERSIZE_50MB:{dl_url}"
                 )
 
     data = bytes(data)
@@ -173,7 +175,8 @@ def download_youtube_loader(url: str, mode: str = "video_hd") -> dict:
             'title': title,
             'duration': 0,
             'filesize_mb': size_mb,
-            'platform': 'YouTube'
+            'platform': 'YouTube',
+            'direct_url': dl_url
         }
 
 def download_media_custom(url: str, mode: str = "video_hd", tikwm_cache: dict = None) -> dict:
