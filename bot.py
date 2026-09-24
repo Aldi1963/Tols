@@ -795,7 +795,22 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Error dl_act: {e}", exc_info=True)
             err_msg = str(e)
             if "melebihi batas 50 MB" in err_msg or "melebihi batas" in err_msg:
-                await query.message.reply_text(f"{err_msg}", parse_mode="HTML")
+                # Sediakan tombol unduh langsung via browser
+                direct_kb = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🎵 Unduh Audio MP3 Saja", callback_data=f"dl_act:audio:{session_key}")],
+                    [InlineKeyboardButton("📱 Coba Video Hemat (480p)", callback_data=f"dl_act:video_sd:{session_key}")],
+                    [InlineKeyboardButton("« Kembali ke Menu Alat", callback_data="main_menu")]
+                ])
+                msg_limit = (
+                    "⚠️ <b>Video ini berukuran sangat besar (>50 MB)</b> karena berdurasi panjang (Full Album).\n\n"
+                    "💡 <i>Server Telegram membatasi pengiriman berkas langsung di ruang obrolan maksimal 50 MB.\n"
+                    "Silakan pilih format di bawah agar dapat dikirim:</i>"
+                )
+                await query.message.reply_text(
+                    msg_limit,
+                    reply_markup=direct_kb,
+                    parse_mode="HTML"
+                )
             else:
                 await query.message.reply_text(f"❌ Gagal memproses unduhan: {err_msg}", reply_markup=get_tools_hub_reply_keyboard())
 
