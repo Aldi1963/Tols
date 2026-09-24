@@ -738,7 +738,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             res = download_media_custom(info['url'], mode=mode, tikwm_cache=info.get('tikwm_data'))
 
             if res['type'] == 'video':
-                bio = io.BytesIO(res['data'])
+                data_bytes = res.get('data') or b''
+                if not data_bytes or len(data_bytes) == 0:
+                    raise RuntimeError("Berkas video kosong atau gagal diunduh dari server sumber.")
+                bio = io.BytesIO(data_bytes)
                 bio.name = res['filename']
                 bio.seek(0)
                 caption = (
