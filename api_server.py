@@ -267,6 +267,78 @@ async def protect_pdf_password(
         if os.path.exists(in_path): os.remove(in_path)
         if os.path.exists(out_path): os.remove(out_path)
 
+# ==================== 6. WATERMARK KTP & AI ENHANCER API ====================
+@app.post("/api/v1/photo/watermark-ktp", tags=["Proteksi KTP & Foto"])
+async def api_watermark_ktp(
+    file: UploadFile = File(..., description="Unggah foto KTP/SIM/Identitas"),
+    keperluan: str = Form("HANYA UNTUK VERIFIKASI RESMI", description="Keperluan penggunaan dokumen")
+):
+    """Membubuhkan teks watermark diagonal anti-pinjol pada foto KTP/kartu identitas."""
+    img_bytes = await file.read()
+    try:
+        import suite_advanced_tools
+        tgl_now = time.strftime("%d/%m/%Y")
+        res_bytes = suite_advanced_tools.add_watermark_ktp_secure(img_bytes, keperluan, tgl_now)
+        return Response(
+            content=res_bytes,
+            media_type="image/jpeg",
+            headers={"Content-Disposition": "attachment; filename=\"ktp_watermarked.jpg\""}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/photo/enhance", tags=["Proteksi KTP & Foto"])
+async def api_enhance_photo(
+    file: UploadFile = File(..., description="Unggah foto buram/dokumen lama"),
+    sharpness: float = Form(2.2, description="Tingkat penajaman (1.5 - 3.0)")
+):
+    """Meningkatkan ketajaman, menghilangkan blur halus, dan merekonstruksi kontur foto."""
+    img_bytes = await file.read()
+    try:
+        import suite_advanced_tools
+        res_bytes = suite_advanced_tools.enhance_photo_hd(img_bytes, factor_sharpness=sharpness)
+        return Response(
+            content=res_bytes,
+            media_type="image/jpeg",
+            headers={"Content-Disposition": "attachment; filename=\"photo_enhanced.jpg\""}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/tools/qrcode", tags=["Utilitas & Bisnis"])
+def api_generate_qr(
+    text: str = Query(..., description="Isi teks atau link URL"),
+    fill_color: str = Query("#0051C3", description="Warna QR Code hex")
+):
+    """Menghasilkan QR Code modern beresolusi tinggi dengan modul sudut rounded."""
+    try:
+        import suite_advanced_tools
+        res_bytes = suite_advanced_tools.generate_custom_qr_code(text, color_fill=fill_color)
+        return Response(
+            content=res_bytes,
+            media_type="image/png",
+            headers={"Content-Disposition": "inline; filename=\"qrcode.png\""}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/tools/flowchart", tags=["Utilitas & Bisnis"])
+def api_generate_flowchart(
+    steps: List[str] = Query(..., description="Daftar urutan langkah alur"),
+    title: str = Query("DIAGRAM ALUR PROSES", description="Judul bagan")
+):
+    """Merender bagan alur proses (Flowchart vertikal) beresolusi tinggi secara instan."""
+    try:
+        import suite_advanced_tools
+        res_bytes = suite_advanced_tools.generate_flowchart_image(steps, title=title)
+        return Response(
+            content=res_bytes,
+            media_type="image/png",
+            headers={"Content-Disposition": "inline; filename=\"flowchart.png\""}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== 5. GENERATOR MOCKUP MEJA KAYU 3D ====================
 @app.post("/api/v1/mockup/wood-desk", tags=["Mockup 3D"])
 async def generate_wood_desk_mockup_endpoint(

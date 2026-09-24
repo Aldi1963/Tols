@@ -316,20 +316,22 @@ def get_tools_photo_reply_keyboard():
     """Kategori 3: Peralatan Foto, Gambar, Pasfoto & Scan"""
     return ReplyKeyboardMarkup(
         [
-            [KeyboardButton("📄 Scan Dokumen (CamScanner)"), KeyboardButton("🛡️ Watermark KTP Aman")],
-            [KeyboardButton("✂️ Hapus BG & Pasfoto AI"), KeyboardButton("🗜️ Kompres Foto (CPNS)")],
-            [KeyboardButton("🖨️ Pasfoto 4R Siap Cetak"), KeyboardButton("🔍 Scan Foto ke Teks (OCR)")],
-            [KeyboardButton("🖋️ Tanda Tangan Transparan"), KeyboardButton("« KEMBALI KE KOTAK ALAT")],
+            [KeyboardButton("🛡️ Watermark KTP Aman"), KeyboardButton("✨ AI Penjernih Foto (HD)")],
+            [KeyboardButton("📄 Scan Dokumen (CamScanner)"), KeyboardButton("✂️ Hapus BG & Pasfoto AI")],
+            [KeyboardButton("🗜️ Kompres Foto (CPNS)"), KeyboardButton("🖨️ Pasfoto 4R Siap Cetak")],
+            [KeyboardButton("🔍 Scan Foto ke Teks (OCR)"), KeyboardButton("🖋️ Tanda Tangan Transparan")],
+            [KeyboardButton("« KEMBALI KE KOTAK ALAT")],
         ],
         resize_keyboard=True,
         is_persistent=True,
     )
 
 def get_tools_prod_reply_keyboard():
-    """Kategori 4: Kurs Mata Uang & Utilitas"""
+    """Kategori 4: Kurs Mata Uang & Utilitas Bisnis"""
     return ReplyKeyboardMarkup(
         [
             [KeyboardButton("🧾 Buat Kwitansi PDF"), KeyboardButton("📇 Simpan Kontak (VCF)")],
+            [KeyboardButton("📱 Buat QR Code Kustom"), KeyboardButton("📊 Buat Bagan Alur (Flowchart)")],
             [KeyboardButton("💱 KURS VALAS LIVE"), KeyboardButton("📊 Transkrip Nilai (KHS)")],
             [KeyboardButton("« KEMBALI KE KOTAK ALAT")],
         ],
@@ -1838,8 +1840,16 @@ Setiap 1 orang yang bergabung lewat tautan Anda, Anda akan mendapatkan <b>+2 Kuo
 
 <i>(Klik tautan di atas untuk menyalin, lalu bagikan ke teman Anda)</i>"""
 
+    import urllib.parse
+    wa_text = f"Halo! Cobain Bot Multi-Tools Mahasiswa & Pendidik ini deh, lengkap banget bisa buat KTM 3D, konversi PDF, pasfoto AI, dan download video tanpa watermark: {ref_link}"
+    wa_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote(wa_text)}"
+    tg_share = f"https://t.me/share/url?url={ref_link}&text={urllib.parse.quote('Ayo buat dokumen pendidik, KTM mahasiswa, dan olah PDF gratis di bot ini!')}"
+
     ref_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📲 Bagikan ke Telegram", url=f"https://t.me/share/url?url={ref_link}&text=Ayo%20buat%20dokumen%20pendidik%20dan%20KTM%20mahasiswa%20resmi%20beresolusi%20tinggi%20di%20bot%20ini!")],
+        [
+            InlineKeyboardButton("📲 Bagikan ke WhatsApp", url=wa_url),
+            InlineKeyboardButton("✈️ Bagikan ke Telegram", url=tg_share)
+        ],
         [InlineKeyboardButton("« Menu Utama", callback_data="main_menu")]
     ])
     await update.message.reply_text(text, reply_markup=ref_kb, parse_mode="HTML")
@@ -4152,6 +4162,220 @@ async def doc_scan_photo_received(update: Update, context: ContextTypes.DEFAULT_
 
     return ConversationHandler.END
 
+
+# ==================== SUITE PERALATAN BARU: WATERMARK KTP, PENJERNIH, QR & FLOWCHART ====================
+import suite_advanced_tools
+
+WM_KTP_PHOTO, WM_KTP_TEXT = 140, 141
+ENHANCE_PHOTO = 142
+QR_INPUT_TEXT, QR_INPUT_COLOR = 143, 144
+FLOWCHART_INPUT = 145
+
+async def wm_ktp_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "🛡️ <b>WATERMARK KTP AMAN (ANTI-PINJOL)</b>\n\n"
+        "Lindungi foto KTP, SIM, atau kartu identitas Anda dari penyalahgunaan pihak ketiga.\n\n"
+        "📸 <i>Silakan kirimkan <b>FOTO KTP / KARTU IDENTITAS</b> Anda sekarang:</i>"
+    )
+    await update.message.reply_text(msg, parse_mode="HTML")
+    return WM_KTP_PHOTO
+
+async def wm_ktp_photo_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    photo = update.message.photo[-1] if update.message.photo else None
+    doc = update.message.document if update.message.document else None
+    
+    file_obj = None
+    if photo:
+        file_obj = await photo.get_file()
+    elif doc:
+        file_obj = await doc.get_file()
+    else:
+        await update.message.reply_text("⚠️ Mohon kirimkan berkas foto KTP.")
+        return WM_KTP_PHOTO
+        
+    f_bytes = await file_obj.download_as_bytearray()
+    context.user_data['wm_ktp_bytes'] = bytes(f_bytes)
+    
+    msg = (
+        "✅ <b>Foto KTP Berhasil Diterima!</b>\n\n"
+        "✏️ Sekarang, ketikkan <b>KEPERLUAN WATERMARK</b> Anda:\n\n"
+        "<i>Contoh penulisan:</i>\n"
+        "• <code>VERIFIKASI REKENING BANK BCA</code>\n"
+        "• <code>PENDAFTARAN KARTU PRAKERJA</code>\n"
+        "• <code>LAMARAN KERJA PT MAJU MUNDUR</code>"
+    )
+    await update.message.reply_text(msg, parse_mode="HTML")
+    return WM_KTP_TEXT
+
+async def wm_ktp_text_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text_kep = (update.message.text or "VERIFIKASI RESMI").strip()
+    img_b = context.user_data.get('wm_ktp_bytes')
+    if not img_b:
+        await update.message.reply_text("⚠️ Sesi kedaluwarsa. Silakan ulangi.", reply_markup=get_tools_photo_reply_keyboard())
+        return ConversationHandler.END
+        
+    await update.message.reply_text("⏳ <i>Sedang membubuhkan watermark pengaman anti-pinjol...</i>", parse_mode="HTML")
+    try:
+        tgl_now = datetime.now().strftime("%d/%m/%Y")
+        res_bytes = suite_advanced_tools.add_watermark_ktp_secure(img_b, text_kep, tgl_now)
+        
+        bio = io.BytesIO(res_bytes)
+        bio.name = "KTP_Aman_Watermarked.jpg"
+        bio.seek(0)
+        
+        caption = (
+            f"🛡️ <b>KTP Aman Berhasil Diterbitkan!</b>\n\n"
+            f"• Keperluan: <b>{html.escape(text_kep.upper())}</b>\n"
+            f"• Tanggal: <b>{tgl_now}</b>\n"
+            f"• Proteksi: <b>Anti-Pinjol & Anti-Abuse Watermark</b>\n\n"
+            f"✓ <i>Aman digunakan untuk kebutuhan verifikasi yang dituju.</i>"
+        )
+        await context.bot.send_document(
+            chat_id=update.effective_chat.id,
+            document=bio,
+            caption=caption,
+            parse_mode="HTML"
+        )
+        await update.message.reply_text("Selesai! Pilih alat lain di bawah:", reply_markup=get_tools_photo_reply_keyboard())
+    except Exception as e:
+        logger.error(f"Error wm_ktp: {e}")
+        await update.message.reply_text(f"❌ Gagal memproses watermark: {e}", reply_markup=get_tools_photo_reply_keyboard())
+    finally:
+        context.user_data.pop('wm_ktp_bytes', None)
+    return ConversationHandler.END
+
+# --- AI PENJERNIH FOTO ---
+async def enhance_photo_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "✨ <b>AI PENJERNIH & DETAIL ENHANCER (HD)</b>\n\n"
+        "Menghilangkan blur, meningkatkan ketajaman teks, dan memperbaiki kontras foto/dokumen lama.\n\n"
+        "📸 <i>Silakan kirimkan <b>FOTO BURAM</b> Anda sekarang:</i>"
+    )
+    await update.message.reply_text(msg, parse_mode="HTML")
+    return ENHANCE_PHOTO
+
+async def enhance_photo_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    photo = update.message.photo[-1] if update.message.photo else None
+    doc = update.message.document if update.message.document else None
+    
+    file_obj = None
+    if photo:
+        file_obj = await photo.get_file()
+    elif doc:
+        file_obj = await doc.get_file()
+    else:
+        await update.message.reply_text("⚠️ Mohon kirimkan berkas foto.")
+        return ENHANCE_PHOTO
+        
+    await update.message.reply_text("⏳ <i>Sedang menjernihkan foto & merekonstruksi detail (Unblur AI)...</i>", parse_mode="HTML")
+    try:
+        f_bytes = await file_obj.download_as_bytearray()
+        res_bytes = suite_advanced_tools.enhance_photo_hd(bytes(f_bytes))
+        
+        bio = io.BytesIO(res_bytes)
+        bio.name = "Foto_Enhanced_HD.jpg"
+        bio.seek(0)
+        
+        caption = "✨ <b>Foto Berhasil Dijernihkan!</b>\nKetajaman kontur dinaikkan & noise blur direduksi."
+        await context.bot.send_document(
+            chat_id=update.effective_chat.id,
+            document=bio,
+            caption=caption,
+            parse_mode="HTML"
+        )
+        await update.message.reply_text("Selesai! Pilih alat lain di bawah:", reply_markup=get_tools_photo_reply_keyboard())
+    except Exception as e:
+        logger.error(f"Error enhance: {e}")
+        await update.message.reply_text(f"❌ Gagal menjernihkan: {e}", reply_markup=get_tools_photo_reply_keyboard())
+    return ConversationHandler.END
+
+# --- GENERATOR QR CODE KUSTOM ---
+async def qr_maker_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "📱 <b>GENERATOR QR CODE KUSTOM RESOLUSI TINGGI</b>\n\n"
+        "Buat QR code modern untuk website, nomor WhatsApp, nomor rekening, atau teks informasi.\n\n"
+        "✏️ <i>Ketikkan isi tautan / teks QR Code Anda sekarang:</i>"
+    )
+    await update.message.reply_text(msg, parse_mode="HTML")
+    return QR_INPUT_TEXT
+
+async def qr_maker_text_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    qr_text = (update.message.text or "").strip()
+    if not qr_text:
+        await update.message.reply_text("⚠️ Isi teks tidak boleh kosong.")
+        return QR_INPUT_TEXT
+        
+    await update.message.reply_text("⏳ <i>Sedang membuat QR Code modern beresolusi tinggi...</i>", parse_mode="HTML")
+    try:
+        res_bytes = suite_advanced_tools.generate_custom_qr_code(qr_text, color_fill="#0051C3")
+        bio = io.BytesIO(res_bytes)
+        bio.name = "QRCode_Custom.png"
+        bio.seek(0)
+        
+        caption = f"📱 <b>QR Code Kustom Berhasil Dibuat!</b>\n• Isi Data: <code>{html.escape(qr_text[:80])}</code>"
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=bio,
+            caption=caption,
+            parse_mode="HTML"
+        )
+        await update.message.reply_text("Selesai! Pilih alat lain di bawah:", reply_markup=get_tools_prod_reply_keyboard())
+    except Exception as e:
+        logger.error(f"Error qr_maker: {e}")
+        await update.message.reply_text(f"❌ Gagal membuat QR Code: {e}", reply_markup=get_tools_prod_reply_keyboard())
+    return ConversationHandler.END
+
+# --- BAGAN ALUR (FLOWCHART) ---
+async def flowchart_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "📊 <b>GENERATOR DIAGRAM ALUR / FLOWCHART INSTAN</b>\n\n"
+        "Susun langkah proses, alur SOP, atau skripsi secara mudah.\n\n"
+        "✏️ <i>Ketik langkah-langkah alur dipisahkan dengan tanda panah (<code>-></code>) atau baris baru:</i>\n\n"
+        "<i>Contoh:</i>\n"
+        "<code>Mulai -> Login Pengguna -> Validasi Akun -> Dashboard -> Selesai</code>"
+    )
+    await update.message.reply_text(msg, parse_mode="HTML")
+    return FLOWCHART_INPUT
+
+async def flowchart_input_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    raw_text = (update.message.text or "").strip()
+    if not raw_text:
+        await update.message.reply_text("⚠️ Mohon ketikkan urutan langkah alur.")
+        return FLOWCHART_INPUT
+        
+    # Split langkah
+    if "->" in raw_text:
+        steps = [s.strip() for s in raw_text.split("->") if s.strip()]
+    elif "\n" in raw_text:
+        steps = [s.strip() for s in raw_text.splitlines() if s.strip()]
+    else:
+        steps = [s.strip() for s in raw_text.split(",") if s.strip()]
+        
+    if len(steps) < 2:
+        await update.message.reply_text("⚠️ Masukkan minimal 2 langkah alur (contoh: A -> B -> C).")
+        return FLOWCHART_INPUT
+        
+    await update.message.reply_text("⏳ <i>Sedang merender diagram alur estetis...</i>", parse_mode="HTML")
+    try:
+        res_bytes = suite_advanced_tools.generate_flowchart_image(steps[:10], title="DIAGRAM ALUR PROSES")
+        bio = io.BytesIO(res_bytes)
+        bio.name = "Flowchart_Diagram.png"
+        bio.seek(0)
+        
+        caption = f"📊 <b>Diagram Alur Selesai! ({len(steps)} Langkah)</b>"
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=bio,
+            caption=caption,
+            parse_mode="HTML"
+        )
+        await update.message.reply_text("Selesai! Pilih alat lain di bawah:", reply_markup=get_tools_prod_reply_keyboard())
+    except Exception as e:
+        logger.error(f"Error flowchart: {e}")
+        await update.message.reply_text(f"❌ Gagal merender diagram: {e}", reply_markup=get_tools_prod_reply_keyboard())
+    return ConversationHandler.END
+
+
 def main():
     print("Starting Comprehensive Yowes Bot...")
     req_settings = HTTPXRequest(
@@ -4419,6 +4643,55 @@ def main():
         fallbacks=[CommandHandler("cancel", start_command)],
     )
     app.add_handler(doc_scan_conv)
+
+    wm_ktp_conv = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^(🛡️ Watermark KTP Aman|🛡️ Watermark KTP|Watermark KTP)$"), wm_ktp_start),
+            CommandHandler("watermarkktp", wm_ktp_start),
+        ],
+        states={
+            WM_KTP_PHOTO: [MessageHandler(filters.PHOTO | filters.Document.ALL, wm_ktp_photo_received)],
+            WM_KTP_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, wm_ktp_text_received)],
+        },
+        fallbacks=[CommandHandler("cancel", start_command)],
+    )
+    app.add_handler(wm_ktp_conv)
+
+    enhance_conv = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^(✨ AI Penjernih Foto \(HD\)|✨ Penjernih Foto|✨ Unblur Foto)$"), enhance_photo_start),
+            CommandHandler("enhance", enhance_photo_start),
+        ],
+        states={
+            ENHANCE_PHOTO: [MessageHandler(filters.PHOTO | filters.Document.ALL, enhance_photo_received)],
+        },
+        fallbacks=[CommandHandler("cancel", start_command)],
+    )
+    app.add_handler(enhance_conv)
+
+    qr_conv = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^(📱 Buat QR Code Kustom|📱 QR Code Kustom|QR Code)$"), qr_maker_start),
+            CommandHandler("qrcode", qr_maker_start),
+        ],
+        states={
+            QR_INPUT_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, qr_maker_text_received)],
+        },
+        fallbacks=[CommandHandler("cancel", start_command)],
+    )
+    app.add_handler(qr_conv)
+
+    flowchart_conv = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^(📊 Buat Bagan Alur \(Flowchart\)|📊 Bagan Alur|Flowchart)$"), flowchart_start),
+            CommandHandler("flowchart", flowchart_start),
+        ],
+        states={
+            FLOWCHART_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, flowchart_input_received)],
+        },
+        fallbacks=[CommandHandler("cancel", start_command)],
+    )
+    app.add_handler(flowchart_conv)
 
 
     app.add_handler(CommandHandler("autoclip", dl_video_start))
