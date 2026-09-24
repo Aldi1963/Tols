@@ -1,7 +1,6 @@
 from typing import Optional, Dict, Any, List
 import os
 import sys
-import re
 import logging
 import io
 import random
@@ -16,10 +15,6 @@ DB_PATH = "/home/ubuntu/yowes/users.db"
 ADM_VIP_ID, ADM_VIP_DAYS = 120, 121
 ADM_QUOTA_ID, ADM_QUOTA_QTY = 122, 123
 ADM_BCAST_MSG, ADM_BCAST_CONFIRM = 124, 125
-# State Kompres Video WA & Potong MP3
-COMPRESS_WA_VIDEO = 130
-TRIM_AUDIO_FILE, TRIM_AUDIO_TIME = 131, 132
-
 
 from telegram.request import HTTPXRequest
 from telegram import (
@@ -305,11 +300,10 @@ def get_tools_pdf_reply_keyboard():
     )
 
 def get_tools_media_reply_keyboard():
-    """Kategori 2: Peralatan Video & Audio (Kompres WA & Potong MP3)"""
+    """Kategori 2: Peralatan Video & Audio"""
     return ReplyKeyboardMarkup(
         [
             [KeyboardButton("🎬 DOWNLOAD VIDEO (NO WM)"), KeyboardButton("✂️ Auto Clip Video (9:16)")],
-            [KeyboardButton("🗜️ Kompres Video (WA)"), KeyboardButton("✂️ Potong Lagu (MP3)")],
             [KeyboardButton("« KEMBALI KE KOTAK ALAT")],
         ],
         resize_keyboard=True,
@@ -622,7 +616,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
-    logger.info(f"CALLBACK_QUERY TRIGGERED: data='{data}' from_user={query.from_user.id}")
     user = update.effective_user
     u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
 
@@ -800,11 +793,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("Unduhan selesai! Silakan pilih alat lain pada menu di bawah:", reply_markup=get_tools_hub_reply_keyboard())
         except Exception as e:
             logger.error(f"Error dl_act: {e}", exc_info=True)
-            await query.message.reply_text(f"❌ Gagal memproses unduhan: {e}", reply_markup=get_tools_hub_reply_keyboard())
+            err_msg = str(e)
+            if "melebihi batas 50 MB" in err_msg or "melebihi batas" in err_msg:
+                await query.message.reply_text(f"{err_msg}", parse_mode="HTML")
+            else:
+                await query.message.reply_text(f"❌ Gagal memproses unduhan: {err_msg}", reply_markup=get_tools_hub_reply_keyboard())
 
     # Handler Callback Panel Admin Billing
     elif data.startswith("adm_set:"):
-        logger.info(f"ADMIN BILLING CALLBACK RECEIVED: {data} from {user.id}")
         key = data.split(":")[1]
         context.user_data["awaiting_admin_billing_key"] = key
         label_map = {
@@ -1942,19 +1938,9 @@ async def admin_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"📑 Total Dokumen Dihasilkan: <b>{total_gen:,} berkas</b>\n\n"
         f"💳 <b>Finansial (Clipku Pay):</b>\n"
         f"• Total Transaksi Sukses: <b>{total_paid_orders:,}</b>\n"
-        f"• Total Omzet Masuk: <b>Rp {total_revenue:,}</b>\n\n"
-        "📊 <i>Grafik tren pertumbuhan 7 hari terakhir:</i>"
+        f"• Total Omzet Masuk: <b>Rp {total_revenue:,}</b>"
     )
-    try:
-        import admin_chart_service
-        chart_bytes = admin_chart_service.generate_admin_stats_chart(DB_PATH)
-        bio = io.BytesIO(chart_bytes)
-        bio.name = f"Stats_Growth_{datetime.now().strftime('%Y%m%d')}.png"
-        bio.seek(0)
-        await update.message.reply_photo(photo=bio, caption=text, parse_mode="HTML")
-    except Exception as e:
-        logger.error(f"Chart gen error: {e}")
-        await update.message.reply_text(text, parse_mode="HTML")
+    await update.message.reply_text(text, parse_mode="HTML")
 
 
 async def admin_addquota_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -4121,179 +4107,6 @@ async def doc_scan_photo_received(update: Update, context: ContextTypes.DEFAULT_
 
     return ConversationHandler.END
 
-
-# ==================== HANDLER KOMPRES VIDEO WHATSAPP & POTONG MP3 ====================
-
-# 1. KOMPRES VIDEO WHATSAPP (<16 MB)
-async def compress_wa_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = (
-        "🗜️ <b>KOMPRES VIDEO WHATSAPP (<16 MB)</b>\n\n"
-        "Kecilkan ukuran video rekaman kamera ponsel Anda agar pas di bawah 16 MB tanpa pecah, siap dikirim ke obrolan atau grup WhatsApp.\n\n"
-        "📹 <b>Kirimkan berkas video Anda sekarang:</b>"
-    )
-    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« KEMBALI KE KOTAK ALAT")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
-    return COMPRESS_WA_VIDEO
-
-async def compress_wa_video_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
-    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
-        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
-        return ConversationHandler.END
-
-    if not update.message.video and not update.message.document:
-        await update.message.reply_text("⚠️ Harap kirimkan berkas video.")
-        return COMPRESS_WA_VIDEO
-
-    file_id = update.message.video.file_id if update.message.video else update.message.document.file_id
-    status_msg = await update.message.reply_text("⏳ <i>Mengunduh dan menghitung bitrate optimal kompresi WhatsApp (<15 MB)...</i>", parse_mode="HTML")
-
-    try:
-        import tempfile
-        import media_tools_ext
-        tg_file = await context.bot.get_file(file_id)
-
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f_in:
-            in_path = f_in.name
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f_out:
-            out_path = f_out.name
-
-        await tg_file.download_to_drive(in_path)
-        orig_mb = os.path.getsize(in_path) / (1024 * 1024)
-
-        ok = media_tools_ext.compress_video_whatsapp(in_path, out_path, target_mb=14.5)
-        if ok and os.path.exists(out_path):
-            new_mb = os.path.getsize(out_path) / (1024 * 1024)
-            with open(out_path, "rb") as f_res:
-                bio = io.BytesIO(f_res.read())
-            bio.name = f"Video_WhatsApp_{int(new_mb)}MB.mp4"
-            bio.seek(0)
-
-            caption = (
-                f"✅ <b>Video Berhasil Dikompres Pas WhatsApp!</b>\n\n"
-                f"• Ukuran Semula: <b>{orig_mb:.1f} MB</b>\n"
-                f"• Ukuran Baru: <b>{new_mb:.1f} MB</b> (Hemat {int((1 - new_mb/orig_mb)*100)}%)\n"
-                "✓ Siap Langsung Dikirim ke Chat / Grup WhatsApp Tanpa Ditolak"
-            )
-            await context.bot.send_video(chat_id=update.effective_chat.id, video=bio, caption=caption, parse_mode="HTML")
-            await status_msg.delete()
-            await update.message.reply_text("Kompresi selesai! Pilih alat lain di bawah:", reply_markup=get_tools_media_reply_keyboard())
-        else:
-            await status_msg.edit_text("❌ Gagal mengompres video. Pastikan durasi video wajar (di bawah 15 menit).")
-
-        if os.path.exists(in_path):
-            os.remove(in_path)
-        if os.path.exists(out_path):
-            os.remove(out_path)
-
-    except Exception as e:
-        logger.error(f"Error compress wa: {e}", exc_info=True)
-        await status_msg.edit_text(f"❌ Gagal memproses video: {e}")
-
-    return ConversationHandler.END
-
-
-# 2. PEMOTONG AUDIO MP3 (RINGTONE MAKER)
-async def trim_audio_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = (
-        "✂️ <b>PEMOTONG AUDIO & MUSIK MP3 (RINGTONE MAKER)</b>\n\n"
-        "Potong bagian reff / chorus lagu favorit Anda untuk nada dering WhatsApp atau backsound dengan efek fade-in/fade-out halus.\n\n"
-        "🎵 <b>Kirimkan berkas audio MP3 Anda sekarang:</b>"
-    )
-    await update.message.reply_text(msg, reply_markup=ReplyKeyboardMarkup([[KeyboardButton("« KEMBALI KE KOTAK ALAT")]], resize_keyboard=True, is_persistent=True), parse_mode="HTML")
-    return TRIM_AUDIO_FILE
-
-async def trim_audio_file_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
-    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
-        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
-        return ConversationHandler.END
-
-    if not update.message.audio and not update.message.voice and not update.message.document:
-        await update.message.reply_text("⚠️ Harap kirimkan berkas audio/musik MP3.")
-        return TRIM_AUDIO_FILE
-
-    file_id = update.message.audio.file_id if update.message.audio else (update.message.voice.file_id if update.message.voice else update.message.document.file_id)
-    tg_file = await context.bot.get_file(file_id)
-    bio = io.BytesIO()
-    await tg_file.download_to_memory(bio)
-    context.user_data["trim_audio_bytes"] = bio.getvalue()
-
-    msg = (
-        "⏱️ <b>Tentukan Bagian Waktu yang Ingin Dipotong:</b>\n\n"
-        "Ketikkan rentang waktu (menit:detik):\n"
-        "• <code>00:30 - 01:00</code> (ambil 30 detik pada menit ke-1)\n"
-        "• <code>01:15 - 01:45</code> (durasi 30 detik pas nada dering)\n"
-        "• <code>10 - 45</code> (dari detik 10 hingga 45)\n\n"
-        "Ketikkan rentang waktu audio sekarang:"
-    )
-    await update.message.reply_text(msg, parse_mode="HTML")
-    return TRIM_AUDIO_TIME
-
-async def trim_audio_time_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
-    if text in ["« KEMBALI KE KOTAK ALAT", "« KEMBALI KE MENU UTAMA"]:
-        await update.message.reply_text("🛠️ <b>KOTAK ALAT FILE</b>", reply_markup=get_tools_hub_reply_keyboard(), parse_mode="HTML")
-        return ConversationHandler.END
-
-    raw_audio = context.user_data.get("trim_audio_bytes")
-    if not raw_audio:
-        await update.message.reply_text("⚠️ Sesi kedaluwarsa. Silakan kirim ulang file audio.")
-        return ConversationHandler.END
-
-    import auto_clipper
-    parts = [p.strip() for p in text.replace("–", "-").split("-")]
-    if len(parts) != 2:
-        await update.message.reply_text("⚠️ Format belum pas. Contoh: <code>00:30 - 01:00</code>", parse_mode="HTML")
-        return TRIM_AUDIO_TIME
-
-    s_sec = auto_clipper.parse_time_to_seconds(parts[0])
-    e_sec = auto_clipper.parse_time_to_seconds(parts[1])
-    if s_sec is None or e_sec is None or e_sec <= s_sec:
-        await update.message.reply_text("⚠️ Rentang waktu tidak valid. Pastikan waktu selesai lebih besar dari waktu mulai.")
-        return TRIM_AUDIO_TIME
-
-    dur = e_sec - s_sec
-    status_msg = await update.message.reply_text(f"⏳ <i>Memotong audio sepanjang {dur:.1f} detik dengan efek fade halus...</i>", parse_mode="HTML")
-
-    try:
-        import tempfile
-        import media_tools_ext
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f_in:
-            in_p = f_in.name
-            f_in.write(raw_audio)
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f_out:
-            out_p = f_out.name
-
-        ok = media_tools_ext.trim_audio_file(in_p, out_p, start_sec=s_sec, duration_sec=dur, fade=True)
-        if ok and os.path.exists(out_p):
-            with open(out_p, "rb") as f_res:
-                bio = io.BytesIO(f_res.read())
-            bio.name = f"Potongan_Lagu_{int(dur)}s.mp3"
-            bio.seek(0)
-
-            caption = (
-                f"🎵 <b>Audio Berhasil Dipotong!</b>\n\n"
-                f"• Bagian: <b>{text}</b> ({dur:.1f} detik)\n"
-                "✓ Efek Fade-In & Fade-Out Halus\n"
-                "✓ Format MP3 Asli 192 kbps Siap Jadi Nada Dering WhatsApp"
-            )
-            await context.bot.send_audio(chat_id=update.effective_chat.id, audio=bio, caption=caption, parse_mode="HTML")
-            await status_msg.delete()
-            await update.message.reply_text("Pemotongan selesai! Pilih alat lain di bawah:", reply_markup=get_tools_media_reply_keyboard())
-        else:
-            await status_msg.edit_text("❌ Gagal memotong audio.")
-
-        if os.path.exists(in_p):
-            os.remove(in_p)
-        if os.path.exists(out_p):
-            os.remove(out_p)
-
-    except Exception as e:
-        logger.error(f"Error trim audio: {e}", exc_info=True)
-        await status_msg.edit_text(f"❌ Gagal memproses audio: {e}")
-
-    return ConversationHandler.END
-
 def main():
     print("Starting Comprehensive Yowes Bot...")
     req_settings = HTTPXRequest(
@@ -4574,7 +4387,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_button_handler))
 
     print("Bot polling running smoothly...")
-    app.run_polling(drop_pending_updates=True, allowed_updates=['message', 'callback_query'])
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":

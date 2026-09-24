@@ -139,12 +139,22 @@ def download_youtube_loader(url: str, mode: str = "video_hd") -> dict:
         raise RuntimeError("Proses konversi streaming YouTube melebihi batas waktu. Silakan coba kembali sesaat lagi.")
 
     req_dl = urllib.request.Request(dl_url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req_dl, timeout=120) as r:
-        data = r.read()
+    MAX_BYTES = int(49.2 * 1024 * 1024)
+    data = bytearray()
+    with urllib.request.urlopen(req_dl, timeout=90) as r:
+        while True:
+            chunk = r.read(1024 * 1024) # 1MB chunk
+            if not chunk:
+                break
+            data.extend(chunk)
+            if len(data) > MAX_BYTES:
+                raise RuntimeError(
+                    f"⚠️ Video YouTube ini berdurasi panjang (Full Album) sehingga ukurannya melebihi batas 50 MB bot Telegram.\n\n"
+                    f"💡 <i>Solusi:</i> Silakan pilih format <b>[ 🎵 Musik / Audio (MP3) ]</b> atau <b>[ 📱 Video Hemat (480p) ]</b> agar ukurannya pas untuk dikirim."
+                )
 
+    data = bytes(data)
     size_mb = len(data) / (1024 * 1024)
-    if size_mb > 49.5:
-        raise RuntimeError(f"Ukuran berkas ({size_mb:.1f} MB) melampaui batas kirim bot Telegram (50 MB).")
 
     if mode == "audio":
         return {
