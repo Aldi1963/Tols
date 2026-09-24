@@ -5,240 +5,237 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)]()
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)]()
+[![Clipku Pay](https://img.shields.io/badge/Payment-QRIS_Instant_Webhook-blueviolet.svg)]()
 
-> **All-in-One Telegram Bot Suite**: Platform terlengkap untuk pembuatan dokumen verifikasi akademik & pendidik beresolusi tinggi (lolos deteksi SheerID, Canva Edu, Spotify, Apple Student, GitHub Student), mockup fisik 3D fotorealistis, studio pasfoto AI, suite dokumen & PDF profesional, pengunduh video/musik tanpa watermark, pemotong video vertikal 9:16 (Auto Clip), kalkulator kurs valas live, kwitansi pembayaran resmi, kontak saver VCF, hingga proteksi watermark KTP anti-pinjol.
+> **All-in-One Telegram Bot Suite & Modern Web App**: Platform terlengkap untuk pembuatan dokumen verifikasi akademik & pendidik beresolusi tinggi (lolos deteksi SheerID, Canva Edu, Spotify, Apple Student, GitHub Student), simulasi fisik 3D meja kayu fotorealistis, studio pasfoto AI, suite pengolah PDF ala PDF24, pengunduh video & musik media sosial anti-limit, pemotong klip vertikal 9:16 (Auto Clip), kalkulator kurs valas live, generator kwitansi resmi A5, pengingat VIP otomatis, hingga panel administrasi interaktif dengan analitik tren omzet Matplotlib.
 
 ---
 
 ## 📑 Daftar Isi
-- [Fitur Utama](#-fitur-utama)
+- [Fitur Unggulan Sistem](#-fitur-unggulan-sistem)
   - [1. Dokumen Akademik & Mahasiswa](#1-dokumen-akademik--mahasiswa)
   - [2. Mockup 3D Fotorealistis & Sensor EXIF](#2-mockup-3d-fotorealistis--sensor-exif)
   - [3. Dokumen Guru Canva Edu (13 Negara)](#3-dokumen-guru-canva-edu-13-negara)
-  - [4. Kelola Dokumen PDF & Word](#4-kelola-dokumen-pdf--word)
-  - [5. Video Downloader & Auto Clip 9:16](#5-video-downloader--auto-clip-916)
-  - [6. Foto Studio, OCR & Proteksi Privasi](#6-foto-studio-ocr--proteksi-privasi)
-  - [7. Kurs Valas Live & Utilitas Bisnis](#7-kurs-valas-live--utilitas-bisnis)
-  - [8. Sistem Kuota, VIP & Pembayaran QRIS](#8-sistem-kuota-vip--pembayaran-qris)
-  - [9. Keamanan Server & Auto-Backup](#9-keamanan-server--auto-backup)
-- [Arsitektur & Struktur Direktori](#-arsitektur--struktur-direktori)
-- [Persyaratan Sistem & Dependensi](#-persyaratan-sistem--dependensi)
+  - [4. Kelola Dokumen PDF & Word (Suite PDF24 Terpadu)](#4-kelola-dokumen-pdf--word-suite-pdf24-terpadu)
+  - [5. Video Downloader & Auto Clip 9:16 (Bypass Bot & Limit >50MB)](#5-video-downloader--auto-clip-916-bypass-bot--limit-50mb)
+  - [6. Pasfoto Studio AI, OCR & Filter CamScanner](#6-pasfoto-studio-ai-ocr--filter-camscanner)
+  - [7. Kurs Valas Live & Utilitas Produktivitas](#7-kurs-valas-live--utilitas-produktivitas)
+  - [8. Sistem Billing & Webhook Instan QRIS Clipku Pay](#8-sistem-billing--webhook-instan-qris-clipku-pay)
+  - [9. Panel Kendali SuperAdmin Interaktif](#9-panel-kendali-superadmin-interaktif)
+  - [10. Pemeliharaan Otomatis, Cronjob & Keamanan Server](#10-pemeliharaan-otomatis-cronjob--keamanan-server)
+- [Struktur Modul & Direktori Proyek](#-struktur-modul--direktori-proyek)
+- [Daftar 25+ Perintah Pintasan Bot (Commands)](#-daftar-25-perintah-pintasan-bot-commands)
 - [Panduan Instalasi & Deployment PM2](#-panduan-instalasi--deployment-pm2)
-- [Daftar Perintah Telegram Bot](#-daftar-perintah-telegram-bot)
 - [Lisensi](#-lisensi)
 
 ---
 
-## 🚀 Fitur Utama
+## 🚀 Fitur Unggulan Sistem
 
 ### 1. Dokumen Akademik & Mahasiswa
-* **Kartu Tanda Mahasiswa (KTM) Kampus Indonesia**:
-  * Didukung: **Universitas Terbuka (UT)**, **Universitas Indonesia (UI)**, **Universitas Gadjah Mada (UGM)**, **Institut Teknologi Bandung (ITB)**, dan **Universitas Brawijaya (UB)**.
-  * Dilengkapi lambang vektor resmi resolusi tinggi, format NIM valid, barcode Code-128, RFID chip virtual, pasfoto formal jas/blazer Indonesia, cap biro akademik, dan tanda tangan basah.
-* **KTM Kampus Internasional (Ivy League & Oxbridge)**:
-  * Harvard University (US), MIT (US), Stanford University (US), dan University of Oxford (UK).
-* **Kartu Pelajar SMA / SMK Negeri**:
-  * SMAN 1 Jakarta, SMAN 3 Bandung, SMKN 1 Surabaya, SMAN 1 Yogyakarta lengkap dengan lambang Tut Wuri Handayani Kemendikbud & NISN valid.
-* **Surat Keterangan Mahasiswa Aktif (SKMA)**:
-  * Naskah dinas resmi format A4 (300 DPI) berkop Dekanat, nomor surat legal, dan tanda tangan basah pimpinan.
-* **Transkrip Nilai / Kartu Hasil Studi (KHS)**:
-  * Lembar hasil studi semester aktif resmi A4 (8 mata kuliah, 22 SKS, IPK 3.84 Cum Laude, stempel dinas ungu Dekanat, dan tanda tangan Dekan).
-* **Mode Pembuatan Kustom**:
-  * Pengguna dapat menginput nama lengkap sendiri serta mengunggah pasfoto pribadi.
+* **KTM Kampus Indonesia Resmi**: UT (Universitas Terbuka), UI, UGM, ITB, dan Universitas Brawijaya (UB) dengan nomor induk mahasiswa (NIM) realistis, barcode/QR code resmi, logo kampus vector ultra HD, pasfoto formal berjas, dan tanda tangan basah rektor.
+* **KTM Kampus Internasional (Ivy League & Global Top 10)**: Harvard University (US), MIT Tech (US), Stanford University (US), dan University of Oxford (UK) dengan layout otentik standar internasional.
+* **Kartu Pelajar SMA/SMK**: Standar nasional Kementerian Pendidikan Republik Indonesia berlogo Tut Wuri Handayani dan NISN.
+* **Surat Keterangan Mahasiswa Aktif (SKMA)**: Format A4 resmi dengan kop surat universitas, nomor surat keluar, stempel cap basah ungu transparan, tanda tangan dekan, dan watermark anti-pemalsuan.
+* **Transkrip Nilai / Kartu Hasil Studi (KHS)**: Berkas A4 300 DPI berisi tabel sebaran mata kuliah ber-SKS, indeks prestasi kumulatif (IPK 3.84 predikat *Cum Laude*), dan pengesahan akademik.
 
 ### 2. Mockup 3D Fotorealistis & Sensor EXIF
-* **Physical Desk Mockup**: Render simulasi foto fisik kartu di atas meja kerja kayu dengan perspektif kemiringan 3D, bayangan bertingkat (*ambient occlusion*), dan pantulan cahaya ruangan alami di permukaan PVC.
-* **Mika Card Holder + Lanyard**: Render kartu di dalam wadah mika bening ber-seal pres ganda, lubang plong oval, klip logam *stainless steel*, dan tali gantungan tenun resmi kampus.
-* **Hand-Held POV**: Simulasi foto fisik kartu sedang dipegang oleh tangan manusia (tampak ibu jari memegang tepian kartu) untuk lolos peninjauan manual manusia (*human review*).
-* **Anti-Fraud EXIF Injector**: Setiap foto dokumen otomatis disuntikkan metadata sensor kamera asli ponsel (Apple iPhone 14 Pro / Samsung Galaxy S23 Ultra).
+* **Meja Kayu Solid Nyata (*Photorealistic Wood Desk Mockup*)**: Kartu ditempatkan di atas permukaan tekstur kayu solid beresolusi master (`wood_table_master.jpg`), dilengkapi bayangan kontak pekat (*deep contact shadow/ambient occlusion*), bayangan jatuh terarah (*directional cast shadow*), dan pantulan warna hangat meja (*warm color bounce*).
+* **Mika Card Holder & Lanyard Resmi**: Kartu dibungkus casing mika transparan dengan jepitan klip besi dan tali gantungan leher (lanyard) bertuliskan identitas kampus.
+* **Sudut Pandang Tangan (*Handheld POV*)**: Sudut pengambilan foto realistis seolah kartu sedang digenggam oleh tangan pemiliknya di bawah pencahayaan ruangan alami.
+* **Injeksi Metadata EXIF Kamera Asli**: Setiap hasil foto otomatis disuntikkan metadata EXIF kamera smartphone modern (Apple iPhone 14/15 Pro atau Samsung Galaxy S23 Ultra) lengkap dengan model kamera, lensa aperture f/1.8, ISO, focal length, dan timestamp acak agar lolos verifikasi sistem otomatis.
 
 ### 3. Dokumen Guru Canva Edu (13 Negara)
-Menerbitkan paket lengkap berkas pendidik (Kartu Identitas, SK Pengangkatan, Slip Gaji, Surat Mengajar):
-* 🇮🇩 Indonesia (NUPTK, SK Pengangkatan, Surat Mengajar, Slip Gaji)
-* 🇳🇱 Belanda (Registerleraar, Arbeidsovereenkomst, DUO Verklaring, School ID)
-* 🇺🇸 Amerika Serikat (Teacher ID, Employment Letter, Teaching License)
-* 🇬🇧 Inggris (Teacher Registration, School Letter)
-* 🇦🇺 Australia | 🇨🇦 Kanada | 🇫🇷 Prancis | 🇪🇸 Spanyol | 🇦🇷 Argentina | 🇲🇽 Meksiko | 🇵🇭 Filipina | 🇹🇭 Thailand | 🇸🇰 Slowakia.
+Generator dokumen surat tugas, kartu pengajar, dan SK pendidik untuk verifikasi akun Canva for Education / Microsoft Education di 13 negara:
+* 🇮🇩 Indonesia (Surat Tugas Kemendikbud & NUPTK)
+* 🇺🇸 Amerika Serikat (Teacher ID Card & District Employment Verification)
+* 🇬🇧 Britania Raya (UK Department for Education Verification)
+* 🇲🇾 Malaysia (Surat Pengesahan Guru Kementerian Pendidikan Malaysia - KPM)
+* 🇵🇭 Filipina (DepEd Professional Identification Card)
+* 🇹🇭 Thailand, 🇻🇳 Vietnam, 🇸🇬 Singapura, 🇦🇺 Australia, 🇩🇪 Jerman, 🇫🇷 Prancis, 🇮🇳 India, 🇯🇵 Jepang.
 
-### 4. Kelola Dokumen PDF & Word (PDF24 Complete Suite)
-* **Word ke PDF**: Mengonversi berkas `.docx`, `.doc`, `.rtf`, `.txt` menjadi PDF resmi via LibreOffice headless.
-* **PDF ke Word**: Mengonversi dokumen PDF menjadi berkas Microsoft Word editable (`.docx`) mempertahankan tata letak teks dan tabel.
-* **Foto ke PDF (Single / Multi)**: Menggabungkan banyak foto (JPG, PNG, WEBP, Apple HEIC) menjadi satu dokumen PDF rapi.
-* **PDF ke Gambar HD**: Merender setiap halaman berkas PDF menjadi foto JPEG tajam 200 DPI.
-* **Gabung Banyak PDF (Merge)**: Menyatukan berkas-berkas PDF terpisah menjadi 1 file utuh berurutan.
-* **Pecah & Ambil Halaman PDF (Splitter)**: Memotong dan mengekstrak halaman tertentu (misal halaman `1-3, 5`) dari PDF tebal tanpa merusak format.
-* **Putar Halaman PDF (Rotate PDF)**: Memutar seluruh lembar PDF yang miring/terbalik sebesar 90 derajat searah jarum jam secara instan.
-* **Hapus Halaman PDF (Remove Pages)**: Membuang halaman kosong, rusak, atau tidak terpakai (contoh input: `2` atau `1, 3, 5`).
-* **Beri Nomor Halaman (Add Page Numbers)**: Menyematkan nomor urut resmi (*'Halaman 1 dari N'*) di bagian bawah lembar PDF standar skripsi/laporan dinas.
-* **Kunci Password PDF (Protect PDF)**: Mengunci berkas rahasia dengan enkripsi kata sandi kuat AES-128.
-* **Buka Password PDF (Unlock PDF)**: Menghapus proteksi sandi/enkripsi pada e-Statement rekening koran bank atau slip gaji.
-* **Ekstrak Gambar dari PDF**: Mengambil dan mengunduh seluruh foto/gambar asli resolusi penuh yang tertanam di dalam dokumen PDF.
-* **Kompres Dokumen PDF**: Memperkecil ukuran berkas PDF menjadi <500KB atau <1MB menggunakan Ghostscript Optimizer.
+### 4. Kelola Dokumen PDF & Word (Suite PDF24 Terpadu)
+Integrasi suite pengolah dokumen terlengkap berbasis Ghostscript, PyMuPDF, ReportLab, dan LibreOffice:
+* **Word ke PDF & PDF ke Word**: Konversi dua arah berkas `.docx` dan `.pdf` tanpa merusak tata letak font dan tabel.
+* **Foto ke PDF & Scanner Heic**: Mengubah foto kamera HP (JPG, PNG, HEIC iPhone) menjadi berkas PDF A4 siap cetak.
+* **Kompres PDF Ghostscript**: Pengecilan ukuran dokumen PDF hingga 70–85% lebih ringan tanpa mengorbankan keterbacaan teks.
+* **Pecah & Ambil Halaman PDF (Splitter)**: Mengambil rentang halaman tertentu (misal halaman 2–5).
+* **Ekstrak Halaman Tunggal**: Memisahkan setiap halaman PDF menjadi berkas tersendiri.
+* **Putar Halaman (Rotate PDF)**: Rotasi orientasi halaman (90°, 180°, 270°).
+* **Watermark Teks Diagonal Kustom**: Menyematkan stempel teks proteksi dokumen miring semi-transparan.
+* **Penomoran Halaman Otomatis**: Menambahkan nomor halaman berformat dinamis *"Halaman X dari Y"* pada footer dokumen.
+* **Pembersih Metadata Sensitif**: Menghapus riwayat nama pembuat, software editor, dan tanggal modifikasi dari dokumen PDF.
+* **Ekstraktor Gambar PDF**: Mengeluarkan seluruh gambar/foto asli beresolusi tinggi yang tertanam di dalam PDF.
+* **Kunci & Enkripsi PDF**: Mengamankan dokumen PDF dengan enkripsi kata sandi pengguna (Password Protection).
+* **Buka Sandi PDF**: Menghilangkan proteksi kata sandi pada file PDF milik sendiri.
 
-### 5. Video Downloader & Auto Clip 9:16
-* **Multi-Platform Video Downloader**:
-  * 🎵 **TikTok**: Video MP4 tanpa watermark, audio musik MP3, serta album foto slide.
-  * 📸 **Instagram**: Reels, Video Feed, dan audio latar.
-  * 📘 **Facebook**: Reels & Video Publik HD.
-  * ▶️ **YouTube**: Shorts & Video reguler format MP4 dan ekstraksi audio MP3.
-  * 🐦 **X / Twitter**: Video postingan cuitan HD.
-* **Auto Clip Video Vertikal 9:16 (TikTok, Reels, Shorts)**:
-  * **Auto-Framing 9:16**: Mengubah video horizontal menjadi vertikal dengan latar belakang *Dynamic Blur* estetik.
-  * **Auto Split Bersambung**: Memotong video panjang secara otomatis menjadi klip 60 detik berseri (Part 1, Part 2, Part 3) siap upload.
-  * **Klip 30s & 60s Instan**: Memotong klip pembuka (*hook*) secara otomatis bertenaga akselerasi multi-thread FFmpeg.
+### 5. Video Downloader & Auto Clip 9:16 (Bypass Bot & Limit >50MB)
+Engine unduhan media sosial multi-platform berkecepatan tinggi:
+* **Platform Didukung**: TikTok (Video & Slideshow tanpa watermark via TikWM API), Instagram (Reels & Post), YouTube, Facebook Video/Watch, dan Twitter/X.
+* **Anti-Bot Protection Bypass YouTube**: Dilengkapi engine scraping oEmbed/NoEmbed dan streaming loader tanpa terblokir pesan *"Sign in to confirm you’re not a bot"*.
+* **Solusi Pintar Berkas Besar (>50 MB)**:
+  * Tombol **`[ 📥 Unduh Video HD Utuh (Browser) ]`** untuk download langsung via browser tanpa batasan kapasitas 50 MB Telegram.
+  * Opsi ekstraksi **`[ 🎵 Unduh Audio MP3 Saja ]`** dan **`[ 📱 Coba Video Hemat (480p) ]`**.
+* **Auto Clip 9:16 (Reels/TikTok Maker)**: Mengubah video rekaman lanskap menjadi video vertikal 9:16 dengan latar belakang *dynamic blurred mirror* berbasis akselerasi FFmpeg multi-thread.
+* **Auto Splitter 60 Detik**: Memotong video panjang secara otomatis menjadi rangkaian Part 1–3 berdurasi 60 detik bersambung.
+* **Kompres Video WhatsApp (<16 MB)**: Kompresi 2-pass encoding untuk mengecilkan video HP berukuran 50–300 MB menjadi **pas di bawah 15 MB** siap dikirim ke WhatsApp tanpa penolakan.
+* **Pemotong Audio MP3 (*Ringtone Maker*)**: Potong lagu MP3 pada bagian reff/chorus tertentu lengkap dengan efek *Fade-in* & *Fade-out* halus.
 
-### 6. Foto Studio, OCR & Proteksi Privasi
-* **Filter Scanner Dokumen Kertas (CamScanner)**:
-  * Mengubah foto kamera HP yang gelap/kuning menjadi hasil scan putih bersih layaknya mesin scanner kantor.
-  * Menghilangkan bayangan kertas dan jari tangan serta mempertajam tinta tulisan.
-* **Stempel Watermark KTP Aman (Anti-Pinjol)**:
-  * Menempelkan tulisan stempel watermark diagonal semi-transparan rapat (contoh: *"VERIFIKASI REKENING BANK - 22/09/2026"*) pada foto KTP/SIM/KK agar aman dari penyalahgunaan pihak ketiga.
-* **AI Background Remover & Pasfoto Studio HD (U2-Net)**:
-  * Segmentasi helai rambut presisi tinggi dengan model deep learning U2-Net.
-  * Pilihan latar pasfoto resmi: 🔴 Merah KTP (Pantone 186 C), 🔵 Biru Ijazah/UT, ⚪ Putih Visa, 🔘 Abu-Abu Studio, dan 🏁 Transparan PNG dengan efek *Soft Radial Glow*.
-* **Kompres Foto Pas Target (CPNS / BUMN)**:
-  * Kompresi cerdas biner dengan pilihan target pas: 100 KB, 200 KB (SSCASN BKN), 300 KB, dan 500 KB tanpa pecah.
-* **Pasfoto 4R Siap Cetak**:
-  * Mengomposisikan 1 pasfoto ke dalam selembar kertas foto ukuran 4R (4 pcs 4x6, 4 pcs 3x4, 4 pcs 2x3) 300 DPI siap cetak murah.
-* **Scan Foto ke Teks (OCR)**:
-  * Ekstraksi teks dari foto dokumen menggunakan Tesseract OCR (Bahasa Indonesia & Inggris).
-* **Ekstraktor Tanda Tangan Transparan**:
-  * Mengisolasi tanda tangan dari foto kertas biasa menjadi format PNG transparan tajam bertinta biru dinas.
+### 6. Pasfoto Studio AI, OCR & Filter CamScanner
+* **AI Deep Learning Rembg (U2-Net)**: Hapus latar belakang foto secara otomatis dengan presisi helai rambut.
+* **Studio Pasfoto Formal**: Ganti background ke warna resmi Merah KTP (`#DB1514`), Biru Buku Nikah/KTM (`#0B60B0`), Putih Visa (`#FFFFFF`), atau efek studio radial glow.
+* **Kompres Pasfoto Target CPNS/BUMN**: Atur ukuran berkas foto pas target 100 KB, 200 KB, atau 500 KB sesuai syarat portal SSCASN BKN.
+* **Lembar Cetak Pasfoto 4R**: Menata susunan pasfoto ukuran 2x3, 3x4, dan 4x6 dalam satu lembar cetak foto ukuran 4R siap cetak di studio lab foto.
+* **Filter CamScanner Dokumen Kertas**: Normalisasi foto kertas dokumen naskah/ijazah menjadi putih bersih, menajamkan teks hitam, dan mempertahankan keaslian cap stempel berwarna.
+* **OCR Foto ke Teks**: Ekstraksi teks otomatis dari foto naskah/dokumen ke teks ketikan chat Telegram.
+* **Ekstraktor Tanda Tangan Transparan**: Mengisolasi guratan tinta tanda tangan dari kertas putih menjadi berkas PNG transparan resolusi tinggi.
 
-### 7. Kurs Valas Live & Utilitas Bisnis
-* **Kalkulator Kurs Valas Real-Time**:
-  * Terhubung langsung ke pasar valuta asing global per jam (*Live Market Data*).
-  * **Deteksi Cerdas di Chat**: Cukup ketik `$150`, `50 sgd to idr`, `2000 myr`, atau `1000000 idr to usd` di chat bot untuk menghitung nilai tukar seketika.
-  * Papan kurs harian lengkap: USD, SGD, MYR, EUR, JPY, CNY, AUD, GBP, SAR, THB, KRW terhadap Rupiah.
-* **Generator Kwitansi Pembayaran Resmi (PDF A5)**:
-  * Format ringkas: `Nama Pembayar | Nominal | Untuk Pembayaran`.
-  * Otomatis menghasilkan PDF Kwitansi A5 300 DPI lengkap dengan kalimat terbilang rupiah otomatis (*"Dua Juta Lima Ratus Ribu Rupiah"*), nomor bukti unik, stempel LUNAS merah, dan tanda tangan kasir.
-* **Pembuat File Kontak HP Otomatis (VCF Bulk Saver)**:
-  * Mengonversi daftar puluhan/ratusan nomor WhatsApp menjadi 1 berkas kontak `.vcf`.
-  * Sekali ketuk di ponsel, seluruh kontak langsung tersimpan otomatis ke buku telepon Google Contacts / iPhone.
+### 7. Kurs Valas Live & Utilitas Produktivitas
+* **Kalkulator Kurs Valas Real-Time**: Data kurs interbank langsung pasar global yang diperbarui otomatis setiap jam dengan smart-caching 15 menit. Mendukung USD, SGD, MYR, EUR, JPY, CNY, AUD, SAR, THB, KRW ke Rupiah (IDR).
+  * Deteksi ekspresi chat cerdas: bot langsung merespons jika Anda mengetik `$150`, `50 sgd to idr`, atau `RM 250`.
+* **Generator Kwitansi Pembayaran PDF Resmi (A5)**: Pembuat tanda bukti pembayaran resmi dilengkapi nomor kwitansi, tanggal transaksi, nama penerima/pembayar, rincian keperluan, cap lunas, dan **kalimat terbilang rupiah otomatis** (contoh: *"Satu Juta Lima Ratus Ribu Rupiah"*).
+* **Pembuat Kontak HP Massal (*VCard / VCF Bulk Saver*)**: Mengubah daftar nomor HP dari chat teks menjadi berkas kontak `.vcf` yang bisa langsung diimpor ke kontak smartphone Android / iOS dengan 1 kali klik.
 
-### 8. Sistem Kuota, VIP & Pembayaran QRIS
-* **Integrasi Clipku Pay**: Pembayaran otomatis seketika melalui gateway QRIS resmi (`https://m.clipku.com/api/index.php`).
-* **Paket Langganan**:
-  * ⚡ **+10 Kuota Cetak**: Rp 5.000 (Masa aktif permanen).
-  * 👑 **VIP Unlimited 30 Hari**: Rp 15.000 (Bebas cetak ribuan dokumen & seluruh tools tanpa kuota).
-* **Sistem Referral Hadiah Kuota**:
-  * Tautan undangan unik (`t.me/<bot>?start=ref_<user_id>`).
-  * Bonus **+2 kuota gratis** otomatis masuk ke pengundang saat ada pengguna baru bergabung.
+### 8. Sistem Billing & Webhook Instan QRIS Clipku Pay
+* **Metode Pembayaran**: QRIS Real-Time terintegrasi ke payment gateway **Clipku Pay** (`m.clipku.com`).
+* **Aktivasi Seketika via Webhook (`https://m.clipku.com/webhook-yowes.php`)**: Detik itu juga setelah pembeli memindai QRIS (BCA, Mandiri, BRI, GoPay, OVO, Dana, ShopeePay), sistem webhook otomatis memverifikasi transaksi, menambahkan kuota cetak atau mengaktifkan status VIP, dan mengirimkan pesan notifikasi lunas ke Telegram pengguna.
+* **Sistem Kuota Harian & Referral**: Kuota gratis harian pengguna reset otomatis setiap jam 00:00 WIB, dilengkapi tautan referral unik untuk mendapatkan bonus kuota gratis setiap mengajak teman bergabung.
+* **Pengingat Masa Aktif VIP Otomatis (Cronjob H-3 & H-1)**: Bot secara otomatis mengirim pesan pengingat sopan ke pengguna VIP yang masa berlakunya hampir habis beserta tombol instan perpanjangan paket.
 
-### 9. Keamanan Server & Auto-Backup
-* **Auto-Backup Database SQLite ke Telegram Admin**:
-  * Terjadwal otomatis via Crontab setiap hari pukul 02:00.
-  * Mengirimkan snapshot aman berkas `users.db` langsung ke chat Telegram Admin (`@cs_kancilpay`).
-* **Auto-Cleaner Temporary Storage**:
-  * Membersihkan berkas video/audio/gambar sementara di direktori `/tmp` setiap jam agar memori dan SSD VPS tetap lega.
+### 9. Panel Kendali SuperAdmin Interaktif
+Akses eksklusif untuk SuperAdmin ID (`5606826328` / `@cs_kancilpay`):
+* **Dashboard Statistik & Grafik Tren Omzet**: Bot otomatis menggambar **grafik batang dan kurva tren 7 hari terakhir (*Matplotlib dark mode*)** yang memvisualisasikan pertumbuhan user baru dan omzet pembayaran QRIS.
+* **Aktivasi VIP Interaktif**: Tambah masa aktif VIP instan (+7, +30, +60, +365 hari) melalui antarmuka tombol dialog.
+* **Suntik Kuota Interaktif**: Tambah saldo kuota pengguna (+5, +10, +20, +50 kuota) secara langsung.
+* **Kendali Billing & Tarif Dinamis**: Ubah harga paket kuota, tarif VIP, durasi paket, kuota harian gratis, dan bonus referral langsung dari menu bot.
+* **Pengecekan Profil Pengguna (`/checkuser <id>`)**: Melihat riwayat lengkap transaksi, tanggal kadaluarsa VIP, sisa kuota, dan jumlah dokumen yang telah diterbitkan pengguna.
+* **Siaran Pesan Massal (*Broadcast Announcement*)**: Pengiriman pesan pengumuman ke seluruh pengguna dengan fitur pratinjau pesan (*preview*) dan tombol konfirmasi kirim/batal.
+* **Pencadangan Database Instan**: Pengiriman snapshot berkas database SQLite `users.db` langsung ke chat Telegram admin.
+
+### 10. Pemeliharaan Otomatis, Cronjob & Keamanan Server
+* **Auto-Backup Harian Database**: Skrip `backup_and_clean.py` dijadwalkan via Linux crontab setiap hari pukul 02:00 pagi untuk mencadangkan database pengguna ke chat pribadi Admin.
+* **Pembersihan Cache Folder `/tmp`**: Menghapus berkas sementara (video download, gambar render, file audio) yang berumur lebih dari 1 jam untuk mencegah kepenuhan disk VPS.
+* **Web Landing Page Modern**: Berkas landing page responsif (*Tailwind CSS dark theme*) di `/web/index.html` siap dipromosikan ke publik.
 
 ---
 
-## 📁 Arsitektur & Struktur Direktori
+## 🗂️ Struktur Modul & Direktori Proyek
 
-```text
-├── bot.py                       # Master Daemon Telegram Bot (PTB v20+ & Hub Router)
-├── billing.py                   # Sistem Kuota, VIP & Pembayaran QRIS Clipku Pay
-├── backup_and_clean.py          # Crontab Auto-Backup SQLite ke Telegram & Temp Cleaner
-├── currency_service.py          # Engine Kurs Valuta Asing Real-Time & Query Detector
-├── watermark_tool.py            # Engine Stempel Watermark KTP Anti-Pinjol
-├── pdf_splitter_tool.py         # Engine Pemecah & Pengambil Halaman Dokumen PDF
-├── pdf24_suite.py               # Complete PDF24 Tools Engine (Rotate, Delete, Numbering, Protect, Extract)
-├── kwitansi_tool.py             # Engine Pembuat Kwitansi Pembayaran Resmi PDF A5
-├── vcf_saver_tool.py            # Engine Pembuat Berkas Kontak HP Bulk (.vcf)
-├── doc_scanner_tool.py          # Filter Magic Color Dokumen Kertas (CamScanner)
-├── smart_suit_formalizer.py     # AI Studio Pasfoto Formalizer (Soft Radial Glow)
-├── auto_clipper.py              # Engine Pemotong Video Vertikal 9:16 & Multi-Part Splitter
-├── media_downloader.py          # Engine Video Downloader No-WM (TikWM & yt-dlp)
-├── office_tools.py              # Suite Konversi Dokumen, Ghostscript, OCR & Pasfoto 4R
-├── ktm_generator.py             # Generator KTM Kampus Indonesia & Global
-├── kartu_pelajar_generator.py   # Generator Kartu Pelajar SMA/SMK Tut Wuri Handayani
-├── skma_generator.py            # Generator Surat Keterangan Mahasiswa Aktif (A4)
-├── khs_generator.py             # Generator Transkrip Nilai KHS (A4 300 DPI)
-├── desk_mockup_generator.py     # Renderer 3D Meja Kayu, Mika Lanyard & POV Tangan
-├── exif_helper.py               # Metadata Sensor Kamera Asli (iPhone 14 / S23 Ultra)
-├── rembg_service.py             # AI Background Remover (U2-Net)
-├── countries/                   # Modul Generator Dokumen Pendidik 13 Negara
-│   ├── assets/logos/            # Aset Logo Vektor Resmi (UT, UGM, UI, ITB, Tut Wuri)
-│   ├── foto_indo/               # Galeri Kurasi Pasfoto Formal Berjas Indonesia
-│   └── foto_mhs/                # Pasfoto Mahasiswa/Mahasiswi Formal
-└── requirements.txt             # Daftar Dependensi Python Lengkap
+```bash
+/home/ubuntu/yowes/
+├── bot.py                     # Router utama bot Telegram, Hub 2x2, dan handler interaktif
+├── billing.py                 # Manajemen kuota, paket VIP, referral & integrasi API Clipku Pay
+├── media_downloader.py        # Engine pengunduh video TikWM, YouTube loader & yt-dlp
+├── auto_clipper.py            # Pemotong video vertikal 9:16 & auto-splitter 60s (FFmpeg)
+├── media_tools_ext.py         # Engine kompresi video WhatsApp (<16MB) & pemotong lagu MP3
+├── currency_service.py        # Layanan kalkulator & smart-caching kurs valas interbank live
+├── pdf24_suite.py             # Paket utilitas PDF lengkap (Split, Rotate, Watermark, Page Number, Enkripsi)
+├── desk_mockup_generator.py   # Renderer fisik 3D meja kayu fotorealistik, lanyard & POV tangan
+├── rembg_service.py           # Engine AI penghapus latar belakang pasfoto U2-Net
+├── ktm_generator.py           # Generator kartu tanda mahasiswa Indonesia & kampus global
+├── skma_generator.py          # Generator Surat Keterangan Mahasiswa Aktif A4 resmi
+├── khs_generator.py           # Generator Transkrip Nilai / Kartu Hasil Studi (KHS) A4 300 DPI
+├── office_tools.py            # Konversi Word/PDF/Gambar, ekstraktor tanda tangan, & pasfoto 4R
+├── backup_and_clean.py        # Skrip otomatisasi pencadangan database & auto-clean /tmp
+├── admin_chart_service.py     # Generator grafik tren pertumbuhan user & omzet Matplotlib
+├── web/
+│   └── index.html             # Halaman web modern landing page Clipay Bot
+├── countries/
+│   └── assets/
+│       ├── wood_table_master.jpg  # Tekstur foto permukaan kayu solid resolusi master 2048x1365
+│       ├── mockups/               # Aset lanyard dan overlay visual kartu
+│       └── ttd/                   # Koleksi tanda tangan basah & stempel universitas
+└── users.db                   # Database SQLite penyimpanan kuota, user, dan transaksi
 ```
 
 ---
 
-## 🛠️ Persyaratan Sistem & Dependensi
+## ⌨️ Daftar 25+ Perintah Pintasan Bot (Commands)
 
-* **Sistem Operasi**: Linux (Ubuntu 20.04 / 22.04 LTS direkomendasikan), macOS, atau Windows.
-* **Python**: Versi `3.10` atau lebih baru.
-* **Paket Sistem Linux**:
-  ```bash
-  sudo apt-get update
-  sudo apt-get install -y libreoffice-writer-nogui poppler-utils ghostscript qpdf tesseract-ocr tesseract-ocr-ind ffmpeg
-  ```
-
----
-
-## 📦 Panduan Instalasi & Deployment PM2
-
-1. **Clone Repositori**:
-   ```bash
-   git clone https://github.com/Aldi1963/Tols.git
-   cd Tols
-   ```
-
-2. **Setup Virtual Environment & Install Dependensi**:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install --upgrade pip
-   pip install python-telegram-bot[job-queue] pillow pillow-heif rembg onnxruntime python-docx pypdf img2pdf pdf2docx pytesseract yt-dlp reportlab pymupdf numpy
-   ```
-
-3. **Jalankan Bot dengan PM2 Daemon**:
-   ```bash
-   npm install -g pm2
-   pm2 start venv/bin/python3 --name "yowes-bot" -- bot.py
-   pm2 save
-   pm2 startup
-   ```
-
----
-
-## ⌨️ Daftar Perintah Telegram Bot
-
-| Perintah | Deskripsi Layanan |
+| Perintah | Deskripsi Fungsi |
 | :--- | :--- |
-| `/start` | Membuka menu utama compact berformat Hub 2x2 yang lega di HP |
-| `/ktm` | Menerbitkan KTM kampus atau one-shot: `/ktm [KAMPUS] [NAMA]` |
-| `/pelajar` | Membuka generator Kartu Pelajar SMA/SMK Negeri |
-| `/guru` | Membuka katalog dokumen sertifikat pendidik 13 negara |
-| `/khs` | Menerbitkan Transkrip Nilai / Kartu Hasil Studi resmi A4 300 DPI |
-| `/dl` | Mengunduh video tanpa watermark (TikTok, IG Reels, YT, FB, X) |
-| `/autoclip` | Memotong video menjadi vertikal rasio 9:16 (TikTok / Shorts) |
-| `/watermark`| Menempelkan stempel watermark pengaman KTP anti-pinjol |
-| `/splitpdf` | Memecah dan mengambil nomor halaman tertentu dari berkas PDF |
-| `/rotatepdf` | Memutar seluruh halaman dokumen PDF sebesar 90 derajat |
-| `/removepages` | Menghapus lembaran halaman tertentu dari dokumen PDF |
-| `/numberpdf` | Menyematkan nomor urut halaman resmi di bawah lembar PDF |
-| `/protectpdf` | Mengunci dokumen PDF dengan proteksi kata sandi AES-128 |
-| `/extractimages` | Mengambil seluruh foto/gambar asli yang tertanam di dalam PDF |
-| `/kwitansi` | Menerbitkan PDF Kwitansi Pembayaran Resmi A5 terbilang otomatis |
-| `/vcf` | Mengonversi daftar nomor HP menjadi berkas kontak telepon `.vcf` |
-| `/scan` | Membersihkan foto dokumen/kertas kamera HP (CamScanner Filter) |
-| `/kurs` | Menampilkan papan nilai tukar kurs valas dunia real-time |
-| `/rembg` | AI Background Remover & ganti warna pasfoto resmi |
-| `/kompres` | Mengompres foto pas target CPNS (100KB, 200KB, 300KB, 500KB) |
-| `/komprespdf`| Mengompres ukuran berkas PDF menjadi <500KB / <1MB |
-| `/doc2pdf` | Mengonversi dokumen Word (.docx) ke PDF resmi |
-| `/pdf2word` | Mengonversi dokumen PDF ke format Word editable (.docx) |
-| `/profil` | Melihat status langganan VIP, sisa kuota, dan statistik cetak |
-| `/referral` | Mengambil tautan undangan unik (+2 kuota gratis per teman) |
-| `/bantuan` | Panduan lengkap verifikasi SheerID & Canva Edu |
+| `/start` | Membuka menu navigasi utama (Hub 2x2) dan memeriksa status akun |
+| `/help` | Menampilkan panduan lengkap penggunaan seluruh fitur bot |
+| `/topup` | Membuka menu pembelian kuota cetak atau aktivasi VIP Unlimited via QRIS |
+| `/referral` | Mengambil tautan referral unik untuk mengundang teman |
+| `/kurs` | Menampilkan ringkasan tabel kurs mata uang asing ke Rupiah hari ini |
+| `/kwitansi` | Membuka form generator kwitansi pembayaran resmi PDF A5 |
+| `/vcf` | Mengonversi daftar nomor handphone teks menjadi kontak `.vcf` massal |
+| `/scan` | Mengaktifkan filter CamScanner pemutih kertas dokumen & naskah |
+| `/autoclip` | Mengubah video rekaman lanskap menjadi klip vertikal 9:16 (TikTok/Reels) |
+| `/compresswa` | Mengompres video HP berukuran besar menjadi pas di bawah 15 MB untuk WhatsApp |
+| `/trimmp3` | Memotong berkas lagu atau audio MP3 untuk nada dering WhatsApp |
+| `/splitpdf` | Memecah atau mengambil rentang halaman tertentu dari berkas PDF |
+| `/rotatepdf` | Memutar orientasi halaman berkas PDF (90, 180, 270 derajat) |
+| `/watermark` | Membubuhkan stempel watermark teks diagonal pengaman pada PDF |
+| `/pagenumber` | Menambahkan penomoran halaman otomatis (*Page N of M*) pada footer PDF |
+| `/cleanpdf` | Menghapus seluruh metadata sensitif dan riwayat edit dari berkas PDF |
+| `/pdfimages` | Mengekstrak seluruh gambar atau foto yang tertanam di dalam PDF |
+| `/protectpdf` | Mengunci dan mengamankan berkas PDF dengan kata sandi (Password) |
+| `/doc2pdf` | Mengonversi dokumen Microsoft Word (`.docx`) menjadi PDF resmi |
+| `/pdf2doc` | Mengonversi dokumen PDF menjadi berkas Microsoft Word editable |
+| `/compresspdf`| Mengecilkan ukuran berkas dokumen PDF menggunakan Ghostscript |
+| `/sigextract` | Mengekstrak tanda tangan dari foto kertas menjadi PNG transparan |
+| `/pasfoto4r` | Menata pasfoto ukuran 2x3, 3x4, dan 4x6 ke lembar cetak foto 4R |
+| `/stats` | *(Admin)* Melihat statistik akun dan grafik tren omzet mingguan Matplotlib |
+| `/billing` | *(Admin)* Membuka panel kendali pengaturan harga paket kuota dan VIP |
+| `/checkuser` | *(Admin)* Memeriksa detail statistik, kuota, dan masa aktif ID pengguna |
+| `/broadcast` | *(Admin)* Mengirimkan pesan siaran massal ke seluruh pengguna bot |
+
+---
+
+## 🛠️ Panduan Instalasi & Deployment PM2
+
+### 1. Kebutuhan Sistem Server (Ubuntu 20.04 / 22.04 LTS)
+```bash
+sudo apt-get update && sudo apt-get install -y \
+    python3 python3-pip python3-venv \
+    ffmpeg ghostscript libreoffice \
+    libgl1-mesa-glx libglib2.0-0 \
+    php8.2-sqlite3 curl git
+```
+
+### 2. Konfigurasi Lingkungan Virtual Python
+```bash
+cd /home/ubuntu/yowes
+python3 -m venv venv
+source venv/bin/activate
+pip install -U pip wheel
+pip install python-telegram-bot[http2] httpx pillow pillow-heif \
+    pymupdf reportlab matplotlib rembg yt-dlp pexpect
+```
+
+### 3. Pengoperasian Daemon Menggunakan PM2
+```bash
+# Menjalankan bot via PM2
+pm2 start venv/bin/python3 --name "yowes-bot" -- bot.py
+
+# Memeriksa status log bot secara real-time
+pm2 logs yowes-bot
+
+# Memuat ulang bot setelah pembaruan kode
+pm2 reload yowes-bot
+
+# Menyimpan proses agar otomatis berjalan saat VPS reboot
+pm2 save
+pm2 startup
+```
+
+### 4. Menjadwalkan Auto-Backup & Clean Cronjob
+Tambahkan jadwal pemeliharaan harian ke crontab server (`crontab -e`):
+```bash
+# Auto-Backup Database ke Telegram Admin setiap hari pukul 02:00 WIB
+0 2 * * * /home/ubuntu/yowes/venv/bin/python3 /home/ubuntu/yowes/backup_and_clean.py backup >> /home/ubuntu/yowes/backup.log 2>&1
+
+# Auto-Clean file temporary di /tmp setiap 6 jam
+0 */6 * * * /home/ubuntu/yowes/venv/bin/python3 /home/ubuntu/yowes/backup_and_clean.py clean >> /home/ubuntu/yowes/clean.log 2>&1
+
+# Auto-Reminder Pengingat VIP Expire (H-3 dan H-1) setiap pukul 09:00 WIB
+0 9 * * * /home/ubuntu/yowes/venv/bin/python3 /home/ubuntu/yowes/backup_and_clean.py remind_vip >> /home/ubuntu/yowes/remind.log 2>&1
+```
 
 ---
 
 ## 📄 Lisensi
-
-Proyek ini dilisensikan di bawah lisensi **MIT License** — bebas digunakan, dikembangkan, dan disesuaikan untuk keperluan personal maupun komersial.
+Hak Cipta © 2026 **Aldi Irawan (Tols Project)**.  
+Didistribusikan di bawah lisensi resmi [MIT License](LICENSE).
