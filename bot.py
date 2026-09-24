@@ -19,6 +19,7 @@ ADM_BCAST_MSG, ADM_BCAST_CONFIRM = 124, 125
 from telegram.request import HTTPXRequest
 from telegram import (
     Update,
+    WebAppInfo,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     ReplyKeyboardMarkup,
@@ -199,8 +200,9 @@ def get_indonesian_name(gender: str = "Male") -> tuple[str, str]:
     return first, last
 
 def get_main_reply_keyboard(user_id=None):
-    """Reply Keyboard Utama: Format 2x2, otomatis menambahkan tombol PANEL ADMIN jika akun admin"""
+    """Reply Keyboard Utama: Dilengkapi tombol Telegram Mini App (TMA) resmi"""
     rows = [
+        [KeyboardButton("🌐 BUKA MINI APP (TMA)", web_app=WebAppInfo(url="https://m.clipku.com/app.html"))],
         [KeyboardButton("🎓 BUAT DOKUMEN"), KeyboardButton("🛠️ KOTAK ALAT FILE")],
         [KeyboardButton("👑 PROFIL & VIP"), KeyboardButton("ℹ️ PANDUAN & BANTUAN")],
     ]
@@ -2251,7 +2253,10 @@ async def handle_buy_pkg_action(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def reply_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Router Hub 2x2: Bersih, Cepat, dan Sangat Lega di Layar HP"""
-    text = (update.message.text or "").strip()
+    if update.message and update.message.web_app_data:
+        text = update.message.web_app_data.data.strip()
+    else:
+        text = (update.message.text or "").strip()
     user = update.effective_user
     u_data = get_or_create_user(user.id, user.username or "", user.first_name or "")
 
