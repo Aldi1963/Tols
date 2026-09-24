@@ -112,6 +112,22 @@ Akses eksklusif untuk SuperAdmin ID (`5606826328` / `@cs_kancilpay`):
 * **Siaran Pesan Massal (*Broadcast Announcement*)**: Pengiriman pesan pengumuman ke seluruh pengguna dengan fitur pratinjau pesan (*preview*) dan tombol konfirmasi kirim/batal.
 * **Pencadangan Database Instan**: Pengiriman snapshot berkas database SQLite `users.db` langsung ke chat Telegram admin.
 
+### 11. REST Web API & Dokumentasi Interaktif (Swagger UI)
+Proyek ini kini hadir sebagai platform **API as a Service (B2B SaaS)** berkinerja tinggi berbasis **FastAPI**:
+* **URL Dokumentasi Interaktif (Swagger UI)**: `https://m.clipku.com/tols-api/docs`
+* **Alternative ReDoc**: `https://m.clipku.com/tols-api/redoc`
+* **Daftar Endpoint Utama**:
+  * `GET /api/v1/currency/rates`: Seluruh data live kurs valas global.
+  * `GET /api/v1/currency/convert`: Konversi mata uang interbank real-time (contoh: `amount=100&from_curr=USD&to_curr=IDR`).
+  * `GET /api/v1/downloader/info`: Ekstraksi metadata video TikTok, IG, YT, FB, Twitter.
+  * `GET /api/v1/downloader/download`: Download video HD atau MP3 langsung stream dari API.
+  * `POST /api/v1/photo/remove-bg`: Deep learning AI U2-Net hapus background (PNG transparan).
+  * `POST /api/v1/photo/formal-studio`: Pasfoto formal otomatis background Merah KTP / Biru Nikah.
+  * `POST /api/v1/pdf/split`: Pecah halaman dokumen PDF via API.
+  * `POST /api/v1/pdf/watermark`: Sematkan stempel watermark diagonal pada dokumen PDF.
+  * `POST /api/v1/pdf/protect`: Proteksi dan enkripsi dokumen PDF dengan password.
+  * `POST /api/v1/mockup/wood-desk`: Render 3D kartu di atas meja kayu fotorealistis.
+
 ### 10. Pemeliharaan Otomatis, Cronjob & Keamanan Server
 * **Auto-Backup Harian Database**: Skrip `backup_and_clean.py` dijadwalkan via Linux crontab setiap hari pukul 02:00 pagi untuk mencadangkan database pengguna ke chat pribadi Admin.
 * **Pembersihan Cache Folder `/tmp`**: Menghapus berkas sementara (video download, gambar render, file audio) yang berumur lebih dari 1 jam untuk mencegah kepenuhan disk VPS.
