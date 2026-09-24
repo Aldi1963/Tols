@@ -74,7 +74,7 @@ def clip_video_segment(
             'ffmpeg', '-y',
             '-ss', str(start_sec),
             '-t', str(duration_sec),
-            '-i', input_path,
+            '-headers', 'User-Agent: Mozilla/5.0\r\n', '-i', input_path,
             '-filter_complex', filter_complex,
             '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '24',
             '-c:a', 'aac', '-b:a', '128k',
@@ -86,7 +86,7 @@ def clip_video_segment(
             'ffmpeg', '-y',
             '-ss', str(start_sec),
             '-t', str(duration_sec),
-            '-i', input_path,
+            '-headers', 'User-Agent: Mozilla/5.0\r\n', '-i', input_path,
             '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '24',
             '-c:a', 'aac', '-b:a', '128k',
             output_path

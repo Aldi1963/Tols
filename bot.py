@@ -658,21 +658,35 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text("⚠️ Sesi video telah kedaluwarsa.")
             return
 
-        await query.message.reply_text("⏳ <i>Sedang mengunduh sumber video & memproses Auto Clip 9:16 (Vertikal Blur)...</i>", parse_mode="HTML")
+        await query.message.reply_text("⏳ <i>Sedang memproses Auto Clip 9:16 (Vertikal Blur)...</i>", parse_mode="HTML")
         try:
             import auto_clipper
             import tempfile
-            # Unduh video sumber terlebih dahulu
-            res_vid = download_media_custom(info['url'], mode="video_hd", tikwm_cache=info.get('tikwm_data'))
-            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f_src:
+            
+            src_input = None
+            vid_title = info.get('title') or "Video"
+            is_temp_file = False
+            
+            try:
+                res_vid = download_media_custom(info['url'], mode="video_hd", tikwm_cache=info.get('tikwm_data'))
+                f_src = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
                 f_src.write(res_vid['data'])
-                src_tmp = f_src.name
-
-            dur_total = auto_clipper.get_video_duration(src_tmp)
+                f_src.close()
+                src_input = f_src.name
+                vid_title = res_vid.get('title') or vid_title
+                is_temp_file = True
+            except Exception as dl_err:
+                err_s = str(dl_err)
+                if "OVERSIZE_50MB:" in err_s:
+                    # Gunakan direct URL stream langsung ke ffmpeg tanpa perlu simpan 100MB di RAM!
+                    src_input = err_s.split("OVERSIZE_50MB:")[1].strip()
+                    is_temp_file = False
+                else:
+                    raise dl_err
 
             if opt == "split60":
                 out_dir = tempfile.mkdtemp()
-                splits = auto_clipper.auto_split_video(src_tmp, out_dir, segment_length=60.0, max_segments=3, to_vertical=True)
+                splits = auto_clipper.auto_split_video(src_input, out_dir, segment_length=60.0, max_segments=3, to_vertical=True)
                 if not splits:
                     await query.message.reply_text("❌ Gagal membagi klip video.")
                 else:
@@ -681,9 +695,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         with open(s['path'], 'rb') as f_part:
                             part_bytes = f_part.read()
                         bio = io.BytesIO(part_bytes)
-                        bio.name = f"{res_vid['title'][:30]}_Part{s['part']}.mp4"
+                        bio.name = f"{vid_title[:30]}_Part{s['part']}.mp4"
                         bio.seek(0)
-                        cap = f"✂️ <b>Part {s['part']} (Durasi {s['time_str']})</b>\n🎬 {html.escape(res_vid['title'][:60])}\n📱 Format Siap TikTok / Reels (9:16)"
+                        cap = f"✂️ <b>Part {s['part']} (Durasi {s['time_str']})</b>\n🎬 {html.escape(vid_title[:60])}\n📱 Format Siap TikTok / Reels (9:16)"
                         await context.bot.send_video(chat_id=query.message.chat_id, video=bio, caption=cap, parse_mode="HTML")
                         os.remove(s['path'])
                     os.rmdir(out_dir)
@@ -691,20 +705,22 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif opt in ["first30", "first60"]:
                 dur_clip = 30.0 if opt == "first30" else 60.0
                 out_clip = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
-                ok = auto_clipper.clip_video_segment(src_tmp, out_clip, start_sec=0.0, duration_sec=dur_clip, to_vertical=True)
+                ok = auto_clipper.clip_video_segment(src_input, out_clip, start_sec=0.0, duration_sec=dur_clip, to_vertical=True)
                 if ok:
                     with open(out_clip, 'rb') as f_c:
                         c_bytes = f_c.read()
                     bio = io.BytesIO(c_bytes)
-                    bio.name = f"{res_vid['title'][:30]}_Klip_{int(dur_clip)}s.mp4"
+                    bio.name = f"{vid_title[:30]}_Klip_{int(dur_clip)}s.mp4"
                     bio.seek(0)
-                    cap = f"✂️ <b>Klip {int(dur_clip)} Detik Vertikal 9:16 Selesai!</b>\n🎬 {html.escape(res_vid['title'][:60])}\n📱 Siap Diunggah ke TikTok / IG Reels / YouTube Shorts"
+                    cap = f"✂️ <b>Klip {int(dur_clip)} Detik Vertikal 9:16 Selesai!</b>\n🎬 {html.escape(vid_title[:60])}\n📱 Siap Diunggah ke TikTok / IG Reels / YouTube Shorts"
                     await context.bot.send_video(chat_id=query.message.chat_id, video=bio, caption=cap, parse_mode="HTML")
                     os.remove(out_clip)
                 else:
                     await query.message.reply_text("❌ Gagal merender klip vertikal.")
 
-            os.remove(src_tmp)
+            if is_temp_file and src_input and os.path.exists(src_input):
+                os.remove(src_input)
+
             await query.message.reply_text("Klip selesai! Silakan pilih alat lain di bawah:", reply_markup=get_tools_hub_reply_keyboard())
         except Exception as e:
             logger.error(f"Error clip_opt: {e}", exc_info=True)
