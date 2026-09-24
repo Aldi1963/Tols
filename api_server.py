@@ -38,8 +38,10 @@ app = FastAPI(
         "kalkulator kurs valas real-time interbank, serta social media downloader tanpa batas."
     ),
     version="1.0.0",
+    root_path="/tols-api",
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 # Aktifkan CORS agar bisa dipanggil dari domain mana saja
